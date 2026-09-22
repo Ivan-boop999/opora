@@ -229,8 +229,10 @@ function HrefRedirect({ href }: { href: string }) {
 // =============================================================================
 
 import { useParams } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 
 import { AppShell } from '@/app/shell'
+import { useWellnessApi } from '@/features/wellness'
 import {
   FocusPage as FocusScreen,
   GardenPage as GardenScreen,
@@ -248,6 +250,12 @@ import {
 export function AppWorkspaceLayout() {
   const auth = useAuth()
   const location = useLocation()
+  const wellness = useWellnessApi()
+  const preferences = useQuery({
+    queryKey: ['wellness', 'preferences'],
+    queryFn: () => wellness.preferences(),
+    enabled: Boolean(auth.user),
+  })
 
   if (auth.isBootstrapping) return <SessionLoadingSection />
   if (auth.sessionError && !auth.user) {
@@ -256,6 +264,10 @@ export function AppWorkspaceLayout() {
   if (!auth.user) {
     const returnTo = `${location.pathname}${location.searchStr}`
     return <HrefRedirect href={`/login?returnTo=${encodeURIComponent(returnTo)}`} />
+  }
+  // Новых пользователей встречает короткое знакомство; его можно пройти позже с нуля.
+  if (preferences.data && !preferences.data.onboardingDone) {
+    return <HrefRedirect href="/welcome" />
   }
 
   return (

@@ -107,7 +107,7 @@
 | Нужен деплой сейчас или пока достаточно локального запуска? | Да, сразу: владелец работает дистанционно с телефона и смотрит изменения через Telegram |
 | Где находятся пользователи? Должны ли данные оставаться в России? | Аудитория российская, но владелец выбрал бесплатный хостинг; данные на Neon (us-east-2), как в ПромМаркете и Окулус Бизнес |
 | Выбор агента по аудитории и данным: DigitalOcean / Yandex Cloud / свой сервер | Render free tier — осознанное решение владельца ради бесплатности (третий проект подряд); миграция на Yandex Cloud при появлении бюджета |
-| Рабочие домены / URL для API, webapp и website; нужен ли сейчас Yandex CDN? | webapp https://opora.onrender.com · API https://opora-api.onrender.com · website отложен · CDN не нужен |
+| Рабочие домены / URL для API, webapp и website; нужен ли сейчас Yandex CDN? | webapp https://opora-5mdx.onrender.com · API https://opora-api.onrender.com · website отложен · CDN не нужен |
 | Какие приложения публикуем первыми | `backend` + `webapp`; `website` и `mobile` отложены |
 
 Особенности деплоя на Render (вместо Terraform): каталог `infra/` удалён при установке, `scripts/infra.mjs` и `docs/DEPLOYMENT.md` сохранены. Сборка API — `backend/Dockerfile` (миграции Prisma выполняются при старте контейнера с ретраями для холодной Neon); webapp — статический сайт с автодеплоем с `master`. БД — Neon, проект `oculusivan`, база `opora`. Секреты деплоя: `C:\temp\opora-deploy\`. API-сервис free-плана засыпает через 15 минут простоя, первый запрос ~30–60 сек.

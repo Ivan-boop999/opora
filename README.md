@@ -8,7 +8,7 @@ Telegram мини-апп бота [@oporatvoja_bot](https://t.me/oporatvoja_bot)
 
 | Сервис | URL | Платформа |
 | --- | --- | --- |
-| webapp (мини-апп) | https://opora.onrender.com | Render static, free |
+| webapp (мини-апп) | https://opora-5mdx.onrender.com | Render static, free |
 | API | https://opora-api.onrender.com | Render docker, free |
 | БД | Neon (база `opora`) | free |
 
