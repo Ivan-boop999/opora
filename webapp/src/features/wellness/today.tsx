@@ -3,10 +3,12 @@ import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { MobileSupportLink } from '@/app/shell'
 import { useWellnessApi } from './api'
 import { CheckInSheet } from './checkin-sheet'
 import { GardenMini } from './garden-scene'
+import { RoutineSheet } from './routine-sheet'
 
 const greetings: Record<string, { hi: string; sub: string }> = {
   morning: { hi: 'Доброе утро', sub: 'Как начинается день?' },
@@ -28,6 +30,7 @@ export function TodayPage() {
   const queryClient = useQueryClient()
   const [checkInOpen, setCheckInOpen] = useState(false)
   const [checkInNeed, setCheckInNeed] = useState<string | undefined>()
+  const [routineOpen, setRoutineOpen] = useState(false)
 
   const today = useQuery({ queryKey: ['wellness', 'today'], queryFn: () => api.today() })
 
@@ -93,6 +96,8 @@ export function TodayPage() {
           </>
         )}
       </section>
+
+      {data.greetingPeriod === 'morning' ? <SleepCard onSaved={() => today.refetch()} /> : null}
 
       {/* Главная рекомендация */}
       {data.recommendation ? (
@@ -255,6 +260,8 @@ export function TodayPage() {
         </section>
       ) : null}
 
+      <RoutineSheet open={routineOpen} onOpenChange={setRoutineOpen} />
+
       <CheckInSheet
         open={checkInOpen}
         onOpenChange={setCheckInOpen}
@@ -334,3 +341,52 @@ function timeOfDayLabel(value: string): string {
   if (value === 'evening') return 'вечер'
   return 'день'
 }
+
+
+function SleepCard({ onSaved }: { onSaved: () => void }) {
+  const api = useWellnessApi()
+  const [quality, setQuality] = useState<number | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  if (saved) return null
+
+  return (
+    <section aria-label="Качество сна" className="card-soft p-5">
+      <h2 className="font-heading text-[17px] font-semibold">Как спалось?</h2>
+      <p className="mt-1 text-[13px] text-muted-foreground">Субъективно, по твоим ощущениям</p>
+      <div className="mt-3 flex gap-1.5">
+        {[1, 2, 3, 4, 5].map((level) => (
+          <button
+            key={level}
+            type="button"
+            aria-pressed={quality === level}
+            aria-label={sleepLabels[level - 1]}
+            className={cn(
+              'press h-11 flex-1 rounded-2xl border text-[13px] transition-soft',
+              quality === level
+                ? 'border-primary bg-primary text-primary-foreground font-semibold'
+                : 'border-border bg-card text-muted-foreground',
+            )}
+            onClick={() => setQuality(level)}
+          >
+            {level}
+          </button>
+        ))}
+      </div>
+      <Button
+        className="mt-3 h-11 w-full rounded-2xl bg-primary text-[14px] font-medium text-primary-foreground"
+        disabled={quality === null}
+        onClick={() => {
+          void api.sleepQuality(quality!).then(() => {
+            setSaved(true)
+            onSaved()
+          })
+        }}
+      >
+        Отметить
+      </Button>
+    </section>
+  )
+}
+
+const sleepLabels = ['плохо', 'не очень', 'средне', 'хорошо', 'отлично']

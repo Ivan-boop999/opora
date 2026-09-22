@@ -234,6 +234,8 @@ import { useQuery } from '@tanstack/react-query'
 import { AppShell } from '@/app/shell'
 import { useWellnessApi } from '@/features/wellness'
 import {
+  AdminContentPage as AdminContentScreen,
+  EveningPage as EveningScreen,
   FocusPage as FocusScreen,
   GardenPage as GardenScreen,
   InsightsPage as InsightsScreen,
@@ -245,6 +247,7 @@ import {
   ProgramsPage as ProgramsScreen,
   SupportPage as SupportScreen,
   TodayPage as TodayScreen,
+  ScrollPausePage as ScrollPauseScreen,
 } from '@/features/wellness'
 
 export function AppWorkspaceLayout() {
@@ -328,4 +331,16 @@ export function WelcomePage() {
     return <HrefRedirect href="/login" />
   }
   return <OnboardingScreen />
+}
+
+export function EveningPage() {
+  return <EveningScreen />
+}
+
+export function ScrollPausePage() {
+  return <ScrollPauseScreen />
+}
+
+export function AdminContentPage() {
+  return <AdminContentScreen />
 }

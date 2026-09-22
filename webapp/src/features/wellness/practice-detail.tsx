@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { telegram } from '@/platform/telegram'
 
 import { useWellnessApi } from './api'
+import { RoutineSheet } from './routine-sheet'
 
 type Phase = 'card' | 'running' | 'feedback' | 'done'
 
@@ -19,6 +20,7 @@ export function PracticeDetailPage({ code }: { code: string }) {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [reward, setReward] = useState<{ dropsGranted: number; totalDrops: number; plantGrewTo: { species: string; stage: number } | null } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [routineOpen, setRoutineOpen] = useState(false)
 
   const practice = useQuery({
     queryKey: ['wellness', 'practice', code],
@@ -222,6 +224,13 @@ export function PracticeDetailPage({ code }: { code: string }) {
             {card.isFavorite ? 'Убрать из избранного' : 'В избранное'}
           </Button>
         </div>
+        <Button
+          variant="outline"
+          className="h-11 w-full rounded-2xl text-[13.5px]"
+          onClick={() => setRoutineOpen(true)}
+        >
+          Сделать опорой дня
+        </Button>
         <button
           type="button"
           className="mt-1 self-center text-[13px] text-muted-foreground underline-offset-2 hover:underline"
@@ -233,6 +242,12 @@ export function PracticeDetailPage({ code }: { code: string }) {
         >
           Не показывать эту практику
         </button>
+      <RoutineSheet
+        open={routineOpen}
+        onOpenChange={setRoutineOpen}
+        practiceCode={card.code}
+        practiceTitle={card.title}
+      />
       </div>
     </div>
   )

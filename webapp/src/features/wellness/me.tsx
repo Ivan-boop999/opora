@@ -9,6 +9,7 @@ import { useAuth } from '@/features/auth'
 import { cn } from '@/lib/utils'
 
 import { useWellnessApi } from './api'
+import { telegram } from '@/platform/telegram'
 
 const timezoneOptions = [
   'Europe/Moscow',
@@ -158,24 +159,67 @@ export function MePage() {
             </div>
           </section>
 
+          <section aria-label="Напоминания" className="flex flex-col gap-3">
+            <h2 className="font-heading text-[16.5px] font-semibold">Напоминания бота</h2>
+            <p className="rounded-2xl bg-surface-2/60 px-4 py-3 text-[13px] leading-relaxed text-muted-foreground">
+              По умолчанию всё выключено. Не более двух в день, нейтральные тексты, период тишины
+              ночью. /stop боту выключает мгновенно.
+            </p>
+            <NotificationSettings />
+          </section>
+
           <section aria-label="Приватность" className="flex flex-col gap-2">
             <h2 className="font-heading text-[16.5px] font-semibold">Данные</h2>
             <p className="rounded-2xl bg-surface-2/60 px-4 py-3 text-[13px] leading-relaxed text-muted-foreground">
               Отметки, записи дневника и прогресс хранятся в твоём аккаунте. Дневник не попадает в
               аналитику. Удаление аккаунта стирает данные и останавливает напоминания.
             </p>
-            <Button
-              variant="outline"
-              className="h-11 rounded-2xl text-[13.5px] text-destructive"
-              onClick={async () => {
-                if (!window.confirm('Удалить все записи дневника? Это нельзя отменить.')) return
-                await api.deleteAllJournal()
-                queryClient.invalidateQueries({ queryKey: ['wellness'] })
-                setNotice('Дневник очищен')
-              }}
-            >
-              Удалить все записи дневника
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="outline"
+                className="h-11 rounded-2xl text-[13.5px]"
+                onClick={async () => {
+                  const data = await api.accountExport()
+                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+                  const url = URL.createObjectURL(blob)
+                  const link = document.createElement('a')
+                  link.href = url
+                  link.download = 'opora-export.json'
+                  link.click()
+                  URL.revokeObjectURL(url)
+                  setNotice('Экспорт скачан')
+                }}
+              >
+                Скачать мои данные (JSON)
+              </Button>
+              <Button
+                variant="outline"
+                className="h-11 rounded-2xl text-[13.5px] text-destructive"
+                onClick={async () => {
+                  if (!window.confirm('Удалить все записи дневника? Это нельзя отменить.')) return
+                  await api.deleteAllJournal()
+                  queryClient.invalidateQueries({ queryKey: ['wellness'] })
+                  setNotice('Дневник очищен')
+                }}
+              >
+                Удалить все записи дневника
+              </Button>
+              <Button
+                variant="outline"
+                className="h-11 rounded-2xl text-[13.5px] text-destructive"
+                onClick={async () => {
+                  const confirmed = window.confirm(
+                    'Удалить аккаунт полностью? Все отметки, дневник, сад и напоминания будут стёрты. Это нельзя отменить.',
+                  )
+                  if (!confirmed) return
+                  await api.deleteAccount()
+                  telegram.ready()
+                  window.location.assign('/')
+                }}
+              >
+                Удалить аккаунт
+              </Button>
+            </div>
           </section>
         </>
       )}
@@ -210,4 +254,54 @@ function SettingRow({
       <Switch checked={checked} onCheckedChange={onChange} />
     </label>
   )
+}
+
+
+function NotificationSettings() {
+  const api = useWellnessApi()
+  const queryClient = useQueryClient()
+  const preferences = useQuery({
+    queryKey: ['wellness', 'notifications'],
+    queryFn: () => api.notifications(),
+  })
+  const update = useMutation({
+    mutationFn: (input: { kind: string; enabled: boolean; timeMinutes?: number }) =>
+      api.putNotification(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['wellness'] }),
+  })
+
+  if (preferences.isPending) return null
+  const items = preferences.data?.items ?? []
+
+  const labels: Record<string, string> = {
+    anchor: 'Опора дня',
+    program: 'Шаг программы',
+    evening: 'Вечернее завершение',
+    weekly: 'Недельный обзор',
+  }
+
+  return (
+    <div className="card-soft flex flex-col divide-y divide-border">
+      {items.map((item) => (
+        <div key={item.kind} className="flex items-center justify-between gap-3 p-4">
+          <div>
+            <p className="text-[14.5px]">{labels[item.kind] ?? item.kind}</p>
+            {item.enabled ? (
+              <p className="text-[12.5px] text-muted-foreground">{formatTime(item.timeMinutes)}</p>
+            ) : null}
+          </div>
+          <Switch
+            checked={item.enabled}
+            onCheckedChange={(checked) => update.mutate({ kind: item.kind, enabled: checked })}
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function formatTime(minutes: number): string {
+  const hours = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  return `${String(hours).padStart(2, '0')}:${String(rest).padStart(2, '0')}`
 }

@@ -318,7 +318,7 @@ export function createPrismaPlansRepository(db: DbClient): PlansRepository {
 type FocusMark = { at: string; type: string }
 
 /** Wall-clock arithmetic: the only source of truth for elapsed time. */
-function elapsedFromMarks(marks: FocusMark[], now: Date): number {
+export function elapsedFromMarks(marks: FocusMark[], now: Date): number {
   let elapsed = 0
   let openAt: number | null = null
   for (const mark of marks) {

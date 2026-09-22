@@ -16,8 +16,10 @@ export const workspaceRoutesByRole = {
     '/app/focus',
     '/app/programs',
     '/app/insights',
+    '/app/evening',
+    '/app/scroll-pause',
   ],
-  admin: ['/admin', '/admin/users', '/admin/settings'],
+  admin: ['/admin', '/admin/users', '/admin/content', '/admin/settings'],
 } as const satisfies Record<UserRole, ReadonlyArray<`/${string}`>>
 
 type WorkspaceRouteTable = Record<UserRole, ReadonlyArray<string>>

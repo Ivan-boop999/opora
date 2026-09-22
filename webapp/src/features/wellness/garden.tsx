@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { telegram } from '@/platform/telegram'
 
@@ -27,6 +28,7 @@ export function GardenPage() {
   const api = useWellnessApi()
   const queryClient = useQueryClient()
   const [notice, setNotice] = useState<string | null>(null)
+  const [editing, setEditing] = useState<{ id: string; name: string | null; slot: number } | null>(null)
 
   const garden = useQuery({ queryKey: ['wellness', 'garden'], queryFn: () => api.garden() })
 
@@ -117,13 +119,20 @@ export function GardenPage() {
           <h2 className="font-heading text-[17px] font-semibold">Растения</h2>
           <ul className="mt-2 flex flex-col gap-2">
             {(data.plants as Plant[]).map((item: Plant) => (
-              <li key={item.id} className="card-soft flex items-center justify-between gap-3 p-4">
-                <div>
-                  <p className="text-[15px] font-medium">{item.name ?? (speciesLabels as Record<string, string>)[item.species] ?? 'Растение'}</p>
+              <li
+                key={item.id}
+                className="card-soft flex items-center justify-between gap-3 p-4"
+              >
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 text-left"
+                  onClick={() => setEditing({ id: item.id, name: item.name, slot: item.slot })}
+                >
+                  <p className="truncate text-[15px] font-medium">{item.name ?? (speciesLabels as Record<string, string>)[item.species] ?? 'Растение'}</p>
                   <p className="text-[12.5px] text-muted-foreground">
-                    Стадия {item.stage} из 5 · место {item.slot + 1}
+                    Стадия {item.stage} из 5 · место {item.slot + 1} · изменить
                   </p>
-                </div>
+                </button>
                 <div className="flex gap-1" aria-hidden="true">
                   {Array.from({ length: 5 }).map((_, index) => (
                     <span
@@ -186,6 +195,58 @@ export function GardenPage() {
           })}
         </div>
       </section>
+
+      {editing ? (
+        <section aria-label="Редактирование растения" className="card-soft flex flex-col gap-3 p-4">
+          <p className="text-[14.5px] font-semibold">Растение</p>
+          <Input
+            value={editing.name ?? ''}
+            onChange={(event) => setEditing({ ...editing, name: event.target.value })}
+            placeholder="Имя растения — необязательно"
+            className="h-11 rounded-2xl bg-background text-[14.5px]"
+            maxLength={40}
+          />
+          <div>
+            <p className="text-[12.5px] text-muted-foreground">Место в саду</p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {Array.from({ length: 8 }).map((_, slot) => (
+                <button
+                  key={slot}
+                  type="button"
+                  aria-pressed={editing.slot === slot}
+                  className={cn(
+                    'size-9 rounded-xl border text-[13px] transition-soft',
+                    editing.slot === slot
+                      ? 'border-primary bg-leaf-soft text-primary font-semibold'
+                      : 'border-border bg-card text-muted-foreground',
+                  )}
+                  onClick={() => setEditing({ ...editing, slot })}
+                >
+                  {slot + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              className="h-11 flex-1 rounded-2xl bg-primary text-[14px] text-primary-foreground"
+              onClick={() => {
+                void api
+                  .updatePlant(editing.id, { name: editing.name?.trim() || null, slot: editing.slot })
+                  .then(() => {
+                    setEditing(null)
+                    queryClient.invalidateQueries({ queryKey: ['wellness'] })
+                  })
+              }}
+            >
+              Сохранить
+            </Button>
+            <Button variant="outline" className="h-11 rounded-2xl" onClick={() => setEditing(null)}>
+              Отмена
+            </Button>
+          </div>
+        </section>
+      ) : null}
 
       {data.achievements.length > 0 ? (
         <section aria-label="Достижения">

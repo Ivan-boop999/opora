@@ -163,6 +163,22 @@ export function wellnessApi(request: AuthenticatedRequest) {
     deleteJournal: (id: string) => request(`/api/app/journal/${id}`, zVoid, { method: 'DELETE' }),
     deleteAllJournal: () => request('/api/app/journal/all', zShape<{ deleted: number }>(), { method: 'DELETE' }),
 
+    sleepQuality: (quality: number) => {
+      const dateKey = localDateKey()
+      return request(`/api/app/plans/sleep/${dateKey}`, sleepLoose, {
+        method: 'PUT',
+        body: { quality },
+      })
+    },
+
+    notifications: () => request('/api/app/notifications', zShape<{ items: { kind: string; enabled: boolean; timeMinutes: number; weekdays: number[] }[] }>()),
+    putNotification: (input: { kind: string; enabled: boolean; timeMinutes?: number; weekdays?: number[] }) =>
+      request('/api/app/notifications', zVoid, { method: 'PUT', body: input }),
+    disableAllNotifications: () => request('/api/app/notifications/disable-all', zVoid, { method: 'POST' }),
+
+    accountExport: () => request('/api/app/account/export', z.custom<Record<string, unknown>>(() => true)),
+    deleteAccount: () => request('/api/app/account', zVoid, { method: 'DELETE', body: { confirm: 'удалить аккаунт' } }),
+
     supportResources: (country?: string) =>
       request(`/api/app/support/resources${country ? `?country=${country}` : ''}`, zShape<{ items: unknown[] }>()),
 

@@ -1,6 +1,7 @@
 import { createApp } from './app'
 import { createBackendRuntime } from './runtime'
 import { shutdownBackend } from './shutdown'
+import { startBotRuntime } from './modules/telegram-bot'
 
 const runtime = createBackendRuntime()
 const app = createApp({
@@ -17,6 +18,11 @@ const server = Bun.serve({
 })
 
 console.log(`Backend listening on ${server.url}`)
+
+// Живой бот и напоминания — фоновые циклы веб-процесса.
+if (runtime.env.TELEGRAM_BOT_TOKEN) {
+  startBotRuntime({ botToken: runtime.env.TELEGRAM_BOT_TOKEN, db: runtime.prisma })
+}
 
 let shuttingDown = false
 

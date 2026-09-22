@@ -23,6 +23,9 @@ import { createPlansModule } from './modules/plans'
 import { createPreferencesModule } from './modules/preferences'
 import { createPracticesModule } from './modules/practices'
 import { createSupportModule } from './modules/support'
+import { createAccountModule } from './modules/account'
+import { createAdminContentModule } from './modules/admin-content'
+import { createNotificationsModule } from './modules/notifications'
 import { createUploadsModule } from './modules/uploads'
 import { createUsersModule } from './modules/users'
 import { createRateLimitStores } from './rate-limit'
@@ -317,6 +320,9 @@ export function createApp({
   app.route('/api/app/plans', plans.routes)
   app.route('/api/app/overview', overview.routes)
   app.route('/api/app/support', createSupportModule({ db: prisma }).routes)
+  app.route('/api/app/account', createAccountModule({ db: prisma, requireAuth: auth.requireAuth }).routes)
+  app.route('/api/app/notifications', createNotificationsModule({ db: prisma, requireAuth: auth.requireAuth }).routes)
+  app.route('/api/admin/content', createAdminContentModule({ db: prisma, requireAdmin: auth.requireAdmin }).routes)
 
   // Only the filesystem driver needs the backend to serve the URLs it signs. With an S3 driver
   // the browser uploads straight to the bucket and there is nothing to mount here.

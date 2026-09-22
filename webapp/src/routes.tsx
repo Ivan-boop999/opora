@@ -119,6 +119,24 @@ const insightsRoute = createRoute({
   component: lazyRouteComponent(() => import('./pages'), 'InsightsPage'),
 })
 
+const eveningRoute = createRoute({
+  getParentRoute: () => appWorkspaceRoute,
+  path: '/app/evening',
+  component: lazyRouteComponent(() => import('./pages'), 'EveningPage'),
+})
+
+const scrollPauseRoute = createRoute({
+  getParentRoute: () => appWorkspaceRoute,
+  path: '/app/scroll-pause',
+  component: lazyRouteComponent(() => import('./pages'), 'ScrollPausePage'),
+})
+
+const adminContentRoute = createRoute({
+  getParentRoute: () => adminWorkspaceRoute,
+  path: '/admin/content',
+  component: lazyRouteComponent(() => import('./pages'), 'AdminContentPage'),
+})
+
 const adminWorkspaceRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'adminWorkspace',
@@ -161,10 +179,13 @@ const routeTree = rootRoute.addChildren([
     focusRoute,
     programsRoute,
     insightsRoute,
+    eveningRoute,
+    scrollPauseRoute,
   ]),
   adminWorkspaceRoute.addChildren([
     adminDashboardRoute,
     adminUsersRoute,
+    adminContentRoute,
     adminSettingsRoute,
   ]),
 ])
