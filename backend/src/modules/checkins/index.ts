@@ -55,3 +55,5 @@ export function createCheckInsModule(input: {
 }
 
 export type { CheckInService } from './application/checkin-service'
+
+export { toDto as toCheckInDto } from './infrastructure/checkin-repository'

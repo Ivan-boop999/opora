@@ -15,10 +15,10 @@ import { createReadinessProbe } from './http/readiness'
 import { createAuthSecurity, createFixedWindowRateLimit } from './http/security'
 import { localDateKey, localMinutesOfDay } from './local-date'
 import { createAuthModule, type AuthHttpEnv } from './modules/auth'
-import { createCheckInsModule } from './modules/checkins'
+import { createCheckInsModule, toCheckInDto } from './modules/checkins'
 import { createGardenModule } from './modules/garden'
 import { createJournalModule } from './modules/journal'
-import { createOverviewModule } from './modules/overview'
+import { createInsightsAdapter, createOverviewModule } from './modules/overview'
 import { createPlansModule } from './modules/plans'
 import { createPreferencesModule } from './modules/preferences'
 import { createPracticesModule } from './modules/practices'
@@ -32,7 +32,7 @@ import {
   createPrivateStorage,
   type PrivateStorageRuntime,
 } from './storage'
-import { createInsightsAdapter } from './modules/overview/infrastructure/insights-adapter'
+
 
 type CreateAppOptions = {
   backgroundTasks?: TaskDeferrer
@@ -252,8 +252,7 @@ export function createApp({
           orderBy: { createdAt: 'desc' },
         })
         if (!row) return null
-        const { toDto } = await import('./modules/checkins/infrastructure/checkin-repository')
-        return toDto(row)
+        return toCheckInDto(row)
       },
       recommend: (userId, input) => practices.service.recommend(userId, input),
       routines: (userId) => plans.routines.list(userId),

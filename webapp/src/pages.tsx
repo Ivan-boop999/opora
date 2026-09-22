@@ -223,3 +223,97 @@ function HrefRedirect({ href }: { href: string }) {
   }, [href, router])
   return null
 }
+
+// =============================================================================
+// Wellness product pages
+// =============================================================================
+
+import { useParams } from '@tanstack/react-router'
+
+import { AppShell } from '@/app/shell'
+import {
+  FocusPage as FocusScreen,
+  GardenPage as GardenScreen,
+  InsightsPage as InsightsScreen,
+  JournalPage as JournalScreen,
+  MePage as MeScreen,
+  OnboardingPage as OnboardingScreen,
+  PracticeDetailPage as PracticeDetailScreen,
+  PracticesPage as PracticesScreen,
+  ProgramsPage as ProgramsScreen,
+  SupportPage as SupportScreen,
+  TodayPage as TodayScreen,
+} from '@/features/wellness'
+
+export function AppWorkspaceLayout() {
+  const auth = useAuth()
+  const location = useLocation()
+
+  if (auth.isBootstrapping) return <SessionLoadingSection />
+  if (auth.sessionError && !auth.user) {
+    return <SessionErrorSection retry={auth.retrySession} />
+  }
+  if (!auth.user) {
+    const returnTo = `${location.pathname}${location.searchStr}`
+    return <HrefRedirect href={`/login?returnTo=${encodeURIComponent(returnTo)}`} />
+  }
+
+  return (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  )
+}
+
+export function TodayPage() {
+  return <TodayScreen />
+}
+
+export function PracticesPage() {
+  return <PracticesScreen />
+}
+
+export function PracticeDetailPage() {
+  const params = useParams({ strict: false })
+  const code = String(params.code ?? '')
+  return <PracticeDetailScreen code={code} />
+}
+
+export function GardenPage() {
+  return <GardenScreen />
+}
+
+export function JournalPage() {
+  return <JournalScreen />
+}
+
+export function MePage() {
+  return <MeScreen />
+}
+
+export function SupportPage() {
+  return <SupportScreen />
+}
+
+export function FocusPage() {
+  return <FocusScreen />
+}
+
+export function ProgramsPage() {
+  return <ProgramsScreen />
+}
+
+export function InsightsPage() {
+  return <InsightsScreen />
+}
+
+export function WelcomePage() {
+  const auth = useAuth()
+
+  if (auth.isBootstrapping) return <SessionLoadingSection />
+  if (!auth.user) {
+    // В Telegram вход происходит автоматически; в браузере — обычная страница входа.
+    return <HrefRedirect href="/login" />
+  }
+  return <OnboardingScreen />
+}

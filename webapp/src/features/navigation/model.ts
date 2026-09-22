@@ -5,7 +5,18 @@ import type { UserRole } from '@opora/contracts'
 // login round-trip whether or not the sidebar links to it. `tests/navigation.test.ts` fails when
 // this table and the router drift apart.
 export const workspaceRoutesByRole = {
-  user: ['/app', '/app/profile', '/app/settings'],
+  user: [
+    '/app',
+    '/app/practices',
+    '/app/practices/$code',
+    '/app/garden',
+    '/app/journal',
+    '/app/me',
+    '/app/support',
+    '/app/focus',
+    '/app/programs',
+    '/app/insights',
+  ],
   admin: ['/admin', '/admin/users', '/admin/settings'],
 } as const satisfies Record<UserRole, ReadonlyArray<`/${string}`>>
 
@@ -20,11 +31,7 @@ export type WorkspaceRoutePath = UserRoutePath | AdminRoutePath
 
 // The sidebar menu is a presentation subset of the workspace routes; the type keeps it one.
 const navigationByRole = {
-  user: [
-    { label: 'Home', to: '/app' },
-    { label: 'Profile', to: '/app/profile' },
-    { label: 'Settings', to: '/app/settings' },
-  ],
+  user: [{ label: 'Сегодня', to: '/app' }],
   admin: [
     { label: 'Dashboard', to: '/admin' },
     { label: 'Users', to: '/admin/users' },

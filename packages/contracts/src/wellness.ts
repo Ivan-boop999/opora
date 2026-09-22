@@ -576,3 +576,6 @@ export type SessionDto = z.infer<typeof sessionDtoSchema>
 export type Need = z.infer<typeof needSchema>
 export type TimeOfDay = z.infer<typeof timeOfDaySchema>
 export type RecommendationQuery = z.infer<typeof recommendationQuerySchema>
+export type TodayResponse = z.infer<typeof todayResponseSchema>
+export type InsightsResponse = z.infer<typeof insightsResponseSchema>
+export type GardenResponse = z.infer<typeof gardenResponseSchema>

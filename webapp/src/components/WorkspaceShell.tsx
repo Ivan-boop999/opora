@@ -50,7 +50,7 @@ export function WorkspaceShell({
   const navigationItems = navigationItemsForRole(user.role)
   const activeItem = navigationItems.find((item) => item.to === pathname)
   const homePath = homePathForRole(user.role)
-  const settingsPath = user.role === 'admin' ? '/admin/settings' : '/app/settings'
+  const settingsPath = '/admin/settings'
   const items: ReadonlyArray<DashboardNavigationItem> = navigationItems.map((item) => ({
     ...item,
     icon: iconsByPath[item.to],
@@ -60,7 +60,7 @@ export function WorkspaceShell({
   return (
     <SidebarProvider defaultOpen={getSidebarDefaultOpen()}>
       <AppSidebar
-        accountPath={user.role === 'user' ? '/app/profile' : undefined}
+        accountPath={undefined}
         homePath={homePath}
         items={items}
         onLogout={onLogout}

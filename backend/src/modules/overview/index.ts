@@ -30,3 +30,5 @@ export function createOverviewModule(input: {
 }
 
 export type { OverviewService } from './application/overview-service'
+
+export { createInsightsAdapter } from './infrastructure/insights-adapter'

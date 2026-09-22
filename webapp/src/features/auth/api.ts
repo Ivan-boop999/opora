@@ -1,5 +1,6 @@
 import {
   cookieAuthResponseSchema,
+  telegramAuthRequestSchema,
   cookieLogoutRequestSchema,
   cookieRefreshRequestSchema,
   cookieRefreshResponseSchema,
@@ -77,6 +78,18 @@ export class AuthApi {
     const payload = loginRequestSchema.parse(input)
     return this.authCoordinator(async () => {
       const data = await this.http.request('/api/auth/login', cookieAuthResponseSchema, {
+        method: 'POST',
+        body: payload,
+      })
+      const sessionEvent = publishBrowserSessionState('authenticated')
+      return { data, sessionEpoch: sessionEvent.epoch }
+    })
+  }
+
+  loginWithTelegram(input: { initData: string }): Promise<BrowserSessionTransition<CookieAuthResponse>> {
+    const payload = telegramAuthRequestSchema.parse(input)
+    return this.authCoordinator(async () => {
+      const data = await this.http.request('/api/auth/telegram', cookieAuthResponseSchema, {
         method: 'POST',
         body: payload,
       })

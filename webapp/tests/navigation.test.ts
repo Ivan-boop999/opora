@@ -20,7 +20,7 @@ test('role navigation exposes only the current workspace', () => {
 })
 
 test('cross-role destinations resolve to the current role home', () => {
-  expect(resolveRoleDestination('user', '/app/profile')).toBe('/app/profile')
+  expect(resolveRoleDestination('user', '/app/journal')).toBe('/app/journal')
   expect(resolveRoleDestination('user', '/admin/users')).toBe('/app')
   expect(resolveRoleDestination('admin', '/admin/settings')).toBe('/admin/settings')
   expect(resolveRoleDestination('admin', '/app')).toBe('/admin')
@@ -32,7 +32,7 @@ test('workspace route table matches the routes registered under each workspace l
   // sidebar, so the return-path allow-list is pinned to the router, not to the menu.
   const rolesByLayoutId: Record<string, UserRole> = {
     '/adminWorkspace': 'admin',
-    '/userWorkspace': 'user',
+    '/appWorkspace': 'user',
   }
   const registered: Record<UserRole, string[]> = { admin: [], user: [] }
 
@@ -102,12 +102,12 @@ test('route shapes the matcher does not support fall back to the role home', () 
 
 test('return paths reject other roles, public pages, and every open-redirect shape', () => {
   expect(safeReturnPath('user', '/admin')).toBeNull()
-  expect(safeReturnPath('admin', '/app/profile')).toBeNull()
+  expect(safeReturnPath('admin', '/app/journal')).toBeNull()
   expect(safeReturnPath('user', '/')).toBeNull()
   expect(safeReturnPath('user', '/login')).toBeNull()
   expect(safeReturnPath('user', '/forgot-password')).toBeNull()
   expect(safeReturnPath('user', '/app/unknown')).toBeNull()
-  expect(safeReturnPath('user', '/app/profile/extra')).toBeNull()
+  expect(safeReturnPath('user', '/app/journal/extra')).toBeNull()
 
   expect(safeReturnPath('admin', undefined)).toBeNull()
   expect(safeReturnPath('admin', '')).toBeNull()
