@@ -33,7 +33,13 @@ export function SessionLoadingSection() {
   )
 }
 
-export function SessionErrorSection({ retry }: { retry: () => Promise<void> }) {
+export function SessionErrorSection({
+  retry,
+  detail,
+}: {
+  retry: () => Promise<void>
+  detail?: string
+}) {
   const [retryPending, setRetryPending] = useState(false)
 
   async function retrySession() {
@@ -50,9 +56,13 @@ export function SessionErrorSection({ retry }: { retry: () => Promise<void> }) {
   return (
     <RouteStateCard
       alert
-      description="Your session was not cleared. Check the connection and try again."
+      description={
+        detail
+          ? `Не удалось связаться с сервисом. Проверь соединение и попробуй ещё раз. (${detail})`
+          : 'Не удалось связаться с сервисом. Проверь соединение и попробуй ещё раз.'
+      }
       icon={Alert02Icon}
-      title="Session check is temporarily unavailable"
+      title="Проверка сессии временно недоступна"
     >
       <Button
         disabled={retryPending}

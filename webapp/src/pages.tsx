@@ -28,7 +28,7 @@ export function HomePage() {
 
   if (auth.isBootstrapping) return <SessionLoadingSection />
   if (auth.sessionError && !auth.user) {
-    return <SessionErrorSection retry={auth.retrySession} />
+    return <SessionErrorSection retry={auth.retrySession} detail={auth.sessionError?.message} />
   }
   if (auth.user) {
     return (
@@ -129,7 +129,7 @@ export function NotFoundPage() {
 
   if (auth.isBootstrapping) return <SessionLoadingSection />
   if (auth.sessionError && !auth.user) {
-    return <SessionErrorSection retry={auth.retrySession} />
+    return <SessionErrorSection retry={auth.retrySession} detail={auth.sessionError?.message} />
   }
 
   const destination = auth.user ? homePathForRole(auth.user.role) : '/login'
@@ -142,7 +142,7 @@ function WorkspaceRoute({ role }: { role: UserRole }) {
 
   if (auth.isBootstrapping) return <SessionLoadingSection />
   if (auth.sessionError && !auth.user) {
-    return <SessionErrorSection retry={auth.retrySession} />
+    return <SessionErrorSection retry={auth.retrySession} detail={auth.sessionError?.message} />
   }
   if (!auth.user) {
     const returnTo = `${location.pathname}${location.searchStr}`
@@ -170,7 +170,7 @@ function GuestAuthPage({
 
   if (auth.isBootstrapping) return <SessionLoadingSection />
   if (auth.sessionError && !auth.user) {
-    return <SessionErrorSection retry={auth.retrySession} />
+    return <SessionErrorSection retry={auth.retrySession} detail={auth.sessionError?.message} />
   }
   if (auth.user) {
     return (
@@ -259,7 +259,7 @@ export function AppWorkspaceLayout() {
 
   if (auth.isBootstrapping) return <SessionLoadingSection />
   if (auth.sessionError && !auth.user) {
-    return <SessionErrorSection retry={auth.retrySession} />
+    return <SessionErrorSection retry={auth.retrySession} detail={auth.sessionError?.message} />
   }
   if (!auth.user) {
     const returnTo = `${location.pathname}${location.searchStr}`

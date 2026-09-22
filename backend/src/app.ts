@@ -132,6 +132,22 @@ export function createApp({
     })
   })
 
+  // Диагностика входа мини-аппа: что реально прилетает от клиента и чем закончилось.
+  app.use('/api/auth/*', async (c, next) => {
+    const startedAt = Date.now()
+    await next()
+    if (c.req.path.startsWith('/api/auth/refresh') || c.req.path.startsWith('/api/auth/telegram')) {
+      console.log(
+        '[auth-diag]',
+        c.req.method,
+        c.req.path,
+        'status=' + c.res.status,
+        'origin=' + (c.req.header('origin') ?? 'absent'),
+        'ms=' + (Date.now() - startedAt),
+      )
+    }
+  })
+
   app.get('/health', (c) => {
     return c.json({
       status: 'ok',
