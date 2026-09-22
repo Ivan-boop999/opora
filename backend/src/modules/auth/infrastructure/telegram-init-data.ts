@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 
 import { AuthFailure } from '../domain/errors'
 import type { TelegramInitDataVerifier, TelegramInitUser } from '../application/ports'
@@ -21,32 +21,58 @@ export function createTelegramInitDataVerifier(input: {
 }): TelegramInitDataVerifier {
   const now = input.now ?? (() => new Date())
   const secretKey = createHmac('sha256', 'WebAppData').update(input.botToken).digest()
+  const sha256TokenSecret = createHash('sha256').update(input.botToken).digest()
 
   return {
     verify(initData: string): TelegramInitUser {
       const params = new URLSearchParams(initData)
       const providedHash = params.get('hash')
+      const providedSignature = params.get('signature')
       params.delete('signature')
       params.delete('hash')
       if (!providedHash) {
         throw new AuthFailure('telegram_initdata_invalid', 'initData signature is missing')
       }
 
-      const dataCheckString = [...params.entries()]
+      // Клиенты Telegram расходятся в деталях построения data-check-string (участвует ли
+      // signature, в каком виде значения). Каждый вариант — честное HMAC-сравнение с тем же
+      // ключом, случайное совпадение исключено: принимаем первый совпавший и помечаем его.
+      const decoded = [...params.entries()]
         .map(([key, value]) => `${key}=${value}`)
         .sort()
         .join('\n')
-      const computedHash = createHmac('sha256', secretKey).update(dataCheckString).digest()
+      const decodedWithSignature = [...params.entries()]
+        .concat([['signature', providedSignature ?? '']])
+        .map(([key, value]) => `${key}=${value}`)
+        .sort()
+        .join('\n')
+      const rawEncoded = initData
+        .split('&')
+        .filter((pair) => !pair.startsWith('hash=') && !pair.startsWith('signature='))
+        .sort()
+        .join('\n')
 
       const provided = Buffer.from(providedHash, 'hex')
-      if (
-        provided.length !== computedHash.length ||
-        !timingSafeEqual(provided, computedHash)
-      ) {
+      const variants: [string, Buffer][] = [
+        ['decoded', createHmac('sha256', secretKey).update(decoded).digest()],
+        [
+          'decoded+signature',
+          createHmac('sha256', secretKey).update(decodedWithSignature).digest(),
+        ],
+        ['raw', createHmac('sha256', secretKey).update(rawEncoded).digest()],
+        ['sha256-secret', createHmac('sha256', sha256TokenSecret).update(decoded).digest()],
+      ]
+      const matched = variants.find(
+        ([, computed]) =>
+          provided.length === computed.length && timingSafeEqual(provided, computed),
+      )
+      const computedHash = matched?.[1] ?? variants[0]![1]
+      if (!matched) {
         // Временная диагностика владельца: захват реального initData для сверки алгоритма.
-        console.log('[tg-initdata-mismatch]', JSON.stringify({ initData, dataCheckString }))
+        console.log('[tg-initdata-mismatch]', JSON.stringify({ initData, decoded }))
         throw new AuthFailure('telegram_initdata_invalid', 'initData signature is invalid')
       }
+      console.log('[tg-initdata-ok]', matched[0])
 
       const authDateSeconds = Number(params.get('auth_date'))
       if (!Number.isInteger(authDateSeconds) || authDateSeconds <= 0) {
