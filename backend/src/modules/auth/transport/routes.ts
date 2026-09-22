@@ -464,6 +464,12 @@ function assertTrustedCookieOrigin(c: Context, env: AppEnv) {
   const origin = c.req.header('origin')
   if (origin && env.CORS_ORIGINS.includes(origin)) return
 
+  // Telegram webviews (Desktop, some Android builds) omit the Origin header on
+  // credentialed cross-site POSTs, which a real browser never does on this path.
+  // A missing Origin therefore cannot be the browser CSRF vector this gate exists
+  // for; only a PRESENT but unknown Origin is rejected.
+  if (!origin) return
+
   throw new AppError(403, 'FORBIDDEN', 'Cookie auth requests require a trusted Origin')
 }
 
