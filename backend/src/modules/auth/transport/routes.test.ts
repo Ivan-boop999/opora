@@ -86,7 +86,7 @@ describe('auth routes', () => {
     expect((await request('203.0.113.10')).status).toBe(429)
   })
 
-  test('rejects all secure cookie auth writes from untrusted origins before auth service work', async () => {
+  test('rejects secure cookie auth writes from untrusted origins; missing Origin reaches the service', async () => {
     const app = createApp({ env, prisma: {} as DbClient })
     const refreshCookie = `opora_refresh=${'r'.repeat(32)}`
 
@@ -103,6 +103,9 @@ describe('auth routes', () => {
     expect(untrustedLogin.status).toBe(403)
     expect(untrustedLoginBody.error.code).toBe('FORBIDDEN')
 
+    // Telegram webviews (Desktop, some Android builds) omit Origin on credentialed
+    // cross-site POSTs, and a real browser never does — so a missing Origin must pass
+    // the trust gate to the service rather than be rejected here.
     const noOriginRefresh = await app.request('/api/auth/refresh', {
       method: 'POST',
       headers: {
@@ -111,10 +114,8 @@ describe('auth routes', () => {
       },
       body: JSON.stringify({}),
     })
-    const noOriginRefreshBody = await noOriginRefresh.json()
 
-    expect(noOriginRefresh.status).toBe(403)
-    expect(noOriginRefreshBody.error.code).toBe('FORBIDDEN')
+    expect(noOriginRefresh.status).not.toBe(403)
 
     const untrustedLogout = await app.request('/api/auth/logout', {
       method: 'POST',
