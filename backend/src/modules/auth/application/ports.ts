@@ -13,10 +13,37 @@ export type AccessTokenPayload = {
   email: string
 }
 
+export type TelegramInitUser = {
+  id: string
+  firstName?: string
+  lastName?: string
+  username?: string
+  photoUrl?: string
+}
+
+export type TelegramInitDataVerifier = {
+  verify(initData: string): TelegramInitUser
+}
+
 export type AuthRepository = {
   findUserByEmail(email: string): Promise<AuthUserRecord | null>
   createPasswordUserWithSession(input: {
     user: RegisterPayload & { passwordHash: string }
+    session: {
+      refreshTokenHash: string
+      refreshTokenFamilyHash: string
+      expiresAt: Date
+      metadata: SessionMetadata
+    }
+  }): Promise<{ user: AuthUserRecord; session: { id: string } }>
+  upsertTelegramUserWithSession(input: {
+    telegram: {
+      id: string
+      firstName?: string
+      lastName?: string
+      username?: string
+      photoUrl?: string
+    }
     session: {
       refreshTokenHash: string
       refreshTokenFamilyHash: string

@@ -40,6 +40,7 @@ const unusedPasswordResetDependencies = {
 }
 
 const unusedPasswordResetRepository = {
+  upsertTelegramUserWithSession: async () => ({ user, session: { id: 's1' } }),
   createPasswordResetToken: async () => false,
   invalidatePasswordResetToken: async () => undefined,
   hasActivePasswordResetToken: async () => false,

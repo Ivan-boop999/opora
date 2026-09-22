@@ -10,6 +10,7 @@ import { createPrismaAuthRepository } from './infrastructure/auth-repository'
 import { signAccessToken, verifyAccessToken } from './infrastructure/access-tokens'
 import { hashPassword, verifyPassword } from './infrastructure/passwords'
 import { createPasswordResetNotifier } from './infrastructure/password-reset-notifier'
+import { createTelegramInitDataVerifier } from './infrastructure/telegram-init-data'
 import { createPasswordResetTaskQueue } from './infrastructure/password-reset-task-queue'
 import {
   createPasswordResetToken,
@@ -90,6 +91,12 @@ function buildAuthService({
   projectUser,
 }: Required<CreateAuthModuleOptions>) {
   return new AuthService({
+    telegramInitData: env.TELEGRAM_BOT_TOKEN
+      ? createTelegramInitDataVerifier({
+          botToken: env.TELEGRAM_BOT_TOKEN,
+          maxAgeSeconds: env.TELEGRAM_INITDATA_MAX_AGE_SECONDS,
+        })
+      : undefined,
     accessTokens: {
       sign: (payload) => signAccessToken(payload, env),
       verify: (token) => verifyAccessToken(token, env),

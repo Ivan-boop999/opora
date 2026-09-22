@@ -12,6 +12,7 @@ import { userDtoFromPrincipal } from '../domain/user'
 import type {
   AccessTokens,
   AuthRepository,
+  TelegramInitDataVerifier,
   Clock,
   LogoutCleanup,
   PasswordResetNotifier,
@@ -24,6 +25,7 @@ import type {
 
 type AuthServiceDependencies = {
   accessTokens: AccessTokens
+  telegramInitData?: TelegramInitDataVerifier
   passwordResetTasks: PasswordResetTaskQueue
   clock: Clock
   logoutCleanup: LogoutCleanup
@@ -68,6 +70,30 @@ export class AuthService {
     const refreshToken = this.dependencies.refreshTokens.create()
     const { user, session } = await this.dependencies.repository.createPasswordUserWithSession({
       user: { ...input, passwordHash },
+      session: {
+        refreshTokenHash: this.dependencies.refreshTokens.hash(refreshToken),
+        refreshTokenFamilyHash: this.dependencies.refreshTokens.familyHash(refreshToken),
+        expiresAt: this.refreshExpiresAt(now),
+        metadata,
+      },
+    })
+
+    return this.sessionResponse(user, session.id, refreshToken)
+  }
+
+  async loginWithTelegram(
+    input: { initData: string },
+    metadata: SessionMetadata,
+  ) {
+    if (!this.dependencies.telegramInitData) {
+      throw new AuthFailure('telegram_unavailable', 'Telegram login is not configured')
+    }
+    const telegram = this.dependencies.telegramInitData.verify(input.initData)
+
+    const now = this.dependencies.clock.now()
+    const refreshToken = this.dependencies.refreshTokens.create()
+    const { user, session } = await this.dependencies.repository.upsertTelegramUserWithSession({
+      telegram,
       session: {
         refreshTokenHash: this.dependencies.refreshTokens.hash(refreshToken),
         refreshTokenFamilyHash: this.dependencies.refreshTokens.familyHash(refreshToken),

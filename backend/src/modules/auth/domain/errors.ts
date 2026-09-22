@@ -7,6 +7,9 @@ export type AuthFailureKind =
   | 'refresh_session_invalid'
   | 'refresh_token_required'
   | 'session_invalid'
+  | 'telegram_initdata_expired'
+  | 'telegram_initdata_invalid'
+  | 'telegram_unavailable'
 
 export class AuthFailure extends Error {
   constructor(

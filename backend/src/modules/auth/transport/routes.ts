@@ -1,6 +1,7 @@
 import {
   apiErrorSchema,
   cookieAuthResponseSchema,
+  telegramAuthRequestSchema,
   cookieLogoutRequestSchema,
   cookieRefreshRequestSchema,
   cookieRefreshResponseSchema,
@@ -124,6 +125,29 @@ const tokenRegisterRoute = createRoute({
     },
     400: { content: errorResponseContent, description: 'Invalid payload' },
     409: { content: errorResponseContent, description: 'Email already exists' },
+  },
+})
+
+const cookieTelegramLoginRoute = createRoute({
+  method: 'post',
+  path: '/telegram',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: telegramAuthRequestSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    ...authWriteErrorResponses,
+    200: {
+      content: cookieAuthResponseContent,
+      description: 'Verified Telegram WebApp user and created a browser session',
+    },
+    400: { content: errorResponseContent, description: 'Invalid payload or initData' },
+    401: { content: errorResponseContent, description: 'initData signature or freshness failed' },
   },
 })
 
@@ -345,6 +369,15 @@ export function createAuthRoutes({ env, requireAuth, service }: CreateAuthRoutes
   routes.openapi(tokenRegisterRoute, async (c) => {
     const result = await executeAuth(() => service.register(c.req.valid('json'), requestMetadata(c, env)))
     return c.json(result, 201)
+  })
+
+  routes.openapi(cookieTelegramLoginRoute, async (c) => {
+    assertTrustedCookieOrigin(c, env)
+    const result = await executeAuth(() =>
+      service.loginWithTelegram(c.req.valid('json'), requestMetadata(c, env)),
+    )
+    setRefreshCookie(c, result.refreshToken, env)
+    return c.json(withoutRefreshToken(result), 200)
   })
 
   routes.openapi(cookieLoginRoute, async (c) => {

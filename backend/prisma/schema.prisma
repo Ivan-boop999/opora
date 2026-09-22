@@ -13,11 +13,34 @@ model User {
   passwordHash String?       @map("password_hash")
   displayName  String?       @map("display_name")
   role         UserRole      @default(user)
+  /// Telegram link: decimal id as text. A telegram-first account keeps the synthetic email
+  /// <id>@telegram.opora so the password flows stay untouched.
+  telegramId   String?       @unique(map: "users_telegram_id_key") @map("telegram_id")
+  telegramUsername String?   @map("telegram_username")
+  telegramPhotoUrl String?   @map("telegram_photo_url")
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
   sessions            AuthSession[]
   passwordResetTokens PasswordResetToken[]
   avatars             UserAvatar[]
+  preferences         UserPreferences?
+  consents            UserConsent[]
+  checkIns            CheckIn[]            @relation("CheckInAuthor")
+  favorites           PracticeFavorite[]   @relation("PracticeFavorites")
+  exclusions          PracticeExclusion[]  @relation("PracticeExclusions")
+  recommendations     Recommendation[]     @relation("Recommendations")
+  practiceSessions    PracticeSession[]    @relation("PracticeSessions")
+  routines            Routine[]            @relation("RoutineOwner")
+  programEnrollments  ProgramEnrollment[]  @relation("ProgramEnrollments")
+  focusSessions       FocusSession[]       @relation("FocusSessions")
+  sleepEntries        SleepEntry[]         @relation("SleepEntries")
+  journalEntries      JournalEntry[]       @relation("JournalEntries")
+  gardens             Garden?              @relation("Gardens")
+  rewardLedger        RewardLedger[]       @relation("RewardLedger")
+  achievements        Achievement[]        @relation("Achievements")
+  notificationPreferences NotificationPreference[] @relation("NotificationPreferences")
+  notificationJobs    NotificationJob[]    @relation("NotificationJobs")
+  adminAuditLogs      AdminAuditLog[]      @relation("AdminAuditActor")
 
   @@index([role], map: "users_role_idx")
   @@map("users")
@@ -170,4 +193,513 @@ model RateLimitBucket {
   @@id([policy, key, windowStart], map: "rate_limit_buckets_pkey")
   @@index([expiresAt], map: "rate_limit_buckets_expires_at_idx")
   @@map("rate_limit_buckets")
+}
+
+// =============================================================================
+// WELLNESS PRODUCT
+//
+// Day boundaries: the product works in "local days" keyed by a dateKey string
+// (YYYY-MM-DD) computed from the user's timezone in UserPreferences. Reward
+// caps and histories group by that key, so a timezone change can only move the
+// boundary, never remove it. Server events keep UTC timestamps.
+// =============================================================================
+
+model UserPreferences {
+  id                  String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId              String    @unique(map: "user_preferences_user_id_key") @map("user_id") @db.Uuid
+  /// system | light | dark
+  theme               String    @default("system") @map("theme")
+  reduceMotion        Boolean   @default(false) @map("reduce_motion")
+  soundEnabled        Boolean   @default(false) @map("sound_enabled")
+  hapticsEnabled      Boolean   @default(true) @map("haptics_enabled")
+  language            String    @default("ru") @map("language")
+  timezone            String    @default("Europe/Moscow") @map("timezone")
+  /// ISO country code the user picked for support resources. Optional on purpose.
+  country             String?   @map("country")
+  /// Preferred pace from onboarding: 1-3 | 5-10 | 10-20 | varied
+  pacePreset          String    @default("varied") @map("pace_preset")
+  /// Practice restrictions, e.g. seated, no-breathwork, no-sound, no-social
+  restrictions        String[]  @default([])
+  /// Whether garden/achievements surfaces are visible in the UI
+  gamificationVisible Boolean   @default(true) @map("gamification_visible")
+  /// Onboarding state so the flow can be interrupted and resumed
+  onboardingState     Json      @default("{}") @map("onboarding_state")
+  onboardingDoneAt    DateTime? @map("onboarding_done_at")
+  /// Evening card time chosen by the user, minutes from local midnight
+  eveningTimeMinutes  Int?      @map("evening_time_minutes")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade, map: "user_preferences_user_id_fkey")
+
+  @@map("user_preferences")
+}
+
+model UserConsent {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  /// What was agreed to: terms, age-18, data-processing, ai-external
+  purpose   String
+  version   Int
+  grantedAt DateTime @default(now()) @map("granted_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "user_consents_user_id_fkey")
+
+  @@unique([userId, purpose], map: "user_consents_user_id_purpose_key")
+  @@index([userId], map: "user_consents_user_idx")
+  @@map("user_consents")
+}
+
+model CheckIn {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  /// Each scale 1-5, independent; null = not answered
+  mood         Int?
+  energy       Int?
+  tension      Int?
+  /// calm, anxiety, irritation, sadness, joy, interest, emptiness, confusion, other
+  emotions     String[] @default([])
+  /// work, home, relationships, study, loneliness, rest, transit
+  context      String?
+  sleepQuality Int?     @map("sleep_quality")
+  sleepHours   Float?   @map("sleep_hours")
+  note         String?
+  /// calm-down, move, start, rest, connect, understand
+  need         String?
+  dateKey      String   @map("date_key")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  user         User     @relation("CheckInAuthor", fields: [userId], references: [id], onDelete: Cascade, map: "check_ins_user_id_fkey")
+
+  @@index([userId, createdAt], map: "check_ins_user_created_at_idx")
+  @@index([userId, dateKey], map: "check_ins_user_date_key_idx")
+  @@map("check_ins")
+}
+
+/// Permanent identity of a catalog card. `code` is the stable P01..P48-style id.
+model Practice {
+  id        String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  code      String            @unique(map: "practices_code_key")
+  createdAt DateTime          @default(now()) @map("created_at")
+  versions  PracticeVersion[]
+
+  @@map("practices")
+}
+
+model PracticeVersion {
+  id               String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  practiceId       String    @map("practice_id") @db.Uuid
+  version          Int
+  title            String
+  summary          String
+  /// Category key, see contracts practiceCategories
+  category         String
+  tags             String[]  @default([])
+  estimatedMinutes Int       @map("estimated_minutes")
+  /// low | medium
+  effort           String
+  contexts         String[]  @default([])
+  requirements     String[]  @default([])
+  exclusions       String[]  @default([])
+  steps            Json
+  easierVariant    String    @map("easier_variant")
+  alternativeCodes String[]  @default([]) @map("alternative_codes")
+  stopGuidance     String?   @map("stop_guidance")
+  sourceNotes      String?   @map("source_notes")
+  /// draft | published | retired; draft is invisible outside the explicit demo mode
+  reviewStatus     String    @default("draft") @map("review_status")
+  publishedAt      DateTime? @map("published_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  practice         Practice  @relation(fields: [practiceId], references: [id], onDelete: Cascade, map: "practice_versions_practice_id_fkey")
+
+  @@unique([practiceId, version], map: "practice_versions_practice_id_version_key")
+  @@index([reviewStatus, category], map: "practice_versions_status_category_idx")
+  @@map("practice_versions")
+}
+
+model PracticeFavorite {
+  userId        String   @map("user_id") @db.Uuid
+  practiceCode  String   @map("practice_code")
+  createdAt     DateTime @default(now()) @map("created_at")
+  user          User     @relation("PracticeFavorites", fields: [userId], references: [id], onDelete: Cascade, map: "practice_favorites_user_id_fkey")
+
+  @@id([userId, practiceCode], map: "practice_favorites_pkey")
+  @@map("practice_favorites")
+}
+
+model PracticeExclusion {
+  userId        String   @map("user_id") @db.Uuid
+  practiceCode  String   @map("practice_code")
+  createdAt     DateTime @default(now()) @map("created_at")
+  user          User     @relation("PracticeExclusions", fields: [userId], references: [id], onDelete: Cascade, map: "practice_exclusions_user_id_fkey")
+
+  @@id([userId, practiceCode], map: "practice_exclusions_pkey")
+  @@map("practice_exclusions")
+}
+
+model Recommendation {
+  id               String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  practiceCode     String   @map("practice_code")
+  rulesVersion     String   @map("rules_version")
+  need             String?
+  minutesAvailable Int?     @map("minutes_available")
+  reason           String
+  createdAt        DateTime @default(now()) @map("created_at")
+  user             User     @relation("Recommendations", fields: [userId], references: [id], onDelete: Cascade, map: "recommendations_user_id_fkey")
+
+  @@index([userId, createdAt], map: "recommendations_user_created_at_idx")
+  @@map("recommendations")
+}
+
+model PracticeSession {
+  id              String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  practiceCode    String    @map("practice_code")
+  practiceVersion Int       @map("practice_version")
+  /// started | completed | partial | skipped | abandoned
+  status          String    @default("started")
+  /// normal | easier
+  mode            String    @default("normal")
+  /// recommendation | routine | program | manual | support
+  source          String    @default("manual")
+  dateKey         String    @map("date_key")
+  startedAt       DateTime  @default(now()) @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  /// Seconds the user says the attempt took; the timer alone proves nothing.
+  durationSeconds Int?      @map("duration_seconds")
+  feedback        PracticeFeedback?
+  user            User      @relation("PracticeSessions", fields: [userId], references: [id], onDelete: Cascade, map: "practice_sessions_user_id_fkey")
+
+  @@index([userId, dateKey], map: "practice_sessions_user_date_key_idx")
+  @@index([userId, status], map: "practice_sessions_user_status_idx")
+  @@map("practice_sessions")
+}
+
+model PracticeFeedback {
+  id        String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  sessionId String          @unique(map: "practice_feedback_session_id_key") @map("session_id") @db.Uuid
+  /// yes | partial | no
+  tried     String
+  /// easier | same | harder | declined
+  effect    String
+  /// yes | wanted-easier
+  feasible  String
+  comment   String?
+  /// Voluntary report about a card's content
+  complaint String?
+  createdAt DateTime        @default(now()) @map("created_at")
+  session   PracticeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade, map: "practice_feedback_session_id_fkey")
+
+  @@map("practice_feedback")
+}
+
+model Routine {
+  id            String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  title         String
+  /// practice:<code> for catalog anchors, null for custom steps
+  practiceCode  String?   @map("practice_code")
+  customSteps   Json?
+  easierVariant String?   @map("easier_variant")
+  /// morning | day | evening
+  timeOfDay     String    @default("day") @map("time_of_day")
+  timeMinutes   Int?      @map("time_minutes")
+  weekdays      Int[]     @default([1, 2, 3, 4, 5, 6, 7])
+  optional      Boolean   @default(true)
+  category      String?
+  startDateKey  String    @map("start_date_key")
+  pausedAt      DateTime? @map("paused_at")
+  archivedAt    DateTime? @map("archived_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  occurrences   RoutineOccurrence[]
+  user          User      @relation("RoutineOwner", fields: [userId], references: [id], onDelete: Cascade, map: "routines_user_id_fkey")
+
+  @@index([userId, archivedAt], map: "routines_user_archived_at_idx")
+  @@map("routines")
+}
+
+model RoutineOccurrence {
+  id          String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  routineId   String         @map("routine_id") @db.Uuid
+  userId      String         @map("user_id") @db.Uuid
+  dateKey     String         @map("date_key")
+  /// pending | done | partial | moved | skipped
+  status      String         @default("pending")
+  completedAt DateTime?      @map("completed_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  routine     Routine        @relation(fields: [routineId], references: [id], onDelete: Cascade, map: "routine_occurrences_routine_id_fkey")
+
+  @@unique([routineId, dateKey], map: "routine_occurrences_routine_date_key")
+  @@index([userId, dateKey], map: "routine_occurrences_user_date_key_idx")
+  @@map("routine_occurrences")
+}
+
+model Program {
+  id          String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  code        String            @unique(map: "programs_code_key")
+  versions    ProgramVersion[]
+
+  @@map("programs")
+}
+
+model ProgramVersion {
+  id          String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  programId   String        @map("program_id") @db.Uuid
+  version     Int
+  title       String
+  goal        String
+  audience    String
+  daysCount   Int           @map("days_count")
+  /// draft | published | retired
+  status      String        @default("draft")
+  publishedAt DateTime?     @map("published_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  program     Program       @relation(fields: [programId], references: [id], onDelete: Cascade, map: "program_versions_program_id_fkey")
+  days        ProgramDay[]
+  enrollments ProgramEnrollment[]
+
+  @@unique([programId, version], map: "program_versions_program_id_version_key")
+  @@map("program_versions")
+}
+
+model ProgramDay {
+  id                      String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  programVersionId        String        @map("program_version_id") @db.Uuid
+  dayNumber               Int           @map("day_number")
+  intro                   String
+  practiceCode            String?       @map("practice_code")
+  alternativePracticeCode String?       @map("alternative_practice_code")
+  /// For non-practice steps: { kind, title, description }
+  customStep              Json?
+  question                String?
+  programVersion          ProgramVersion @relation(fields: [programVersionId], references: [id], onDelete: Cascade, map: "program_days_program_version_id_fkey")
+
+  @@unique([programVersionId, dayNumber], map: "program_days_version_day_key")
+  @@map("program_days")
+}
+
+model ProgramEnrollment {
+  id               String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId           String        @map("user_id") @db.Uuid
+  programVersionId String        @map("program_version_id") @db.Uuid
+  /// active | paused | completed | dropped
+  status           String        @default("active")
+  currentDay       Int           @default(1) @map("current_day")
+  startedAt        DateTime      @default(now()) @map("started_at")
+  lastActivityAt   DateTime      @default(now()) @map("last_activity_at")
+  completedAt      DateTime?     @map("completed_at")
+  user             User          @relation("ProgramEnrollments", fields: [userId], references: [id], onDelete: Cascade, map: "program_enrollments_user_id_fkey")
+  programVersion   ProgramVersion @relation(fields: [programVersionId], references: [id], onDelete: Cascade, map: "program_enrollments_program_version_id_fkey")
+  dayLogs          ProgramDayLog[]
+
+  @@index([userId, status], map: "program_enrollments_user_status_idx")
+  @@map("program_enrollments")
+}
+
+model ProgramDayLog {
+  id           String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  enrollmentId String          @map("enrollment_id") @db.Uuid
+  dayNumber    Int             @map("day_number")
+  dateKey      String          @map("date_key")
+  /// done | partial | skipped
+  status       String
+  completedAt  DateTime        @default(now()) @map("completed_at")
+  enrollment   ProgramEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade, map: "program_day_logs_enrollment_id_fkey")
+
+  @@unique([enrollmentId, dayNumber], map: "program_day_logs_enrollment_day_key")
+  @@map("program_day_logs")
+}
+
+model FocusSession {
+  id             String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  intention      String
+  plannedMinutes Int       @map("planned_minutes")
+  /// active | paused | completed | stopped
+  status         String    @default("active")
+  startedAt      DateTime  @default(now()) @map("started_at")
+  endedAt        DateTime? @map("ended_at")
+  /// Wall-clock marks the client reports: [{ at, type: start|pause|resume }]
+  marks          Json      @default("[]")
+  elapsedSeconds Int       @default(0) @map("elapsed_seconds")
+  dateKey        String    @map("date_key")
+  user           User      @relation("FocusSessions", fields: [userId], references: [id], onDelete: Cascade, map: "focus_sessions_user_id_fkey")
+
+  @@index([userId, startedAt], map: "focus_sessions_user_started_at_idx")
+  @@map("focus_sessions")
+}
+
+model SleepEntry {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  dateKey   String   @map("date_key")
+  quality   Int
+  bedAt     String?  @map("bed_at")
+  wakeAt    String?  @map("wake_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation("SleepEntries", fields: [userId], references: [id], onDelete: Cascade, map: "sleep_entries_user_id_fkey")
+
+  @@unique([userId, dateKey], map: "sleep_entries_user_date_key_key")
+  @@map("sleep_entries")
+}
+
+model JournalEntry {
+  id          String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  /// free | structured
+  kind        String    @default("free")
+  templateKey String?   @map("template_key")
+  body        String
+  tags        String[]  @default([])
+  isFavorite  Boolean   @default(false) @map("is_favorite")
+  isDraft     Boolean   @default(false) @map("is_draft")
+  editVersion Int       @default(1) @map("edit_version")
+  checkInId   String?   @map("check_in_id") @db.Uuid
+  sessionCode String?   @map("session_code")
+  dateKey     String    @map("date_key")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  user        User      @relation("JournalEntries", fields: [userId], references: [id], onDelete: Cascade, map: "journal_entries_user_id_fkey")
+
+  @@index([userId, updatedAt], map: "journal_entries_user_updated_at_idx")
+  @@index([userId, dateKey], map: "journal_entries_user_date_key_idx")
+  @@map("journal_entries")
+}
+
+model Garden {
+  id        String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId    String        @unique(map: "gardens_user_id_key") @map("user_id") @db.Uuid
+  /// dawn | day | dusk
+  scene     String        @default("day")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  user      User          @relation("Gardens", fields: [userId], references: [id], onDelete: Cascade, map: "gardens_user_id_fkey")
+  plants    GardenPlant[]
+
+  @@map("gardens")
+}
+
+model GardenPlant {
+  id        String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  gardenId  String    @map("garden_id") @db.Uuid
+  /// sprout | fern | bush | blossom | succulent | tree
+  species   String
+  /// 1-5; stage 1 is the seedling every plant starts from
+  stage     Int       @default(1)
+  name      String?
+  slot      Int
+  plantedAt DateTime  @default(now()) @map("planted_at")
+  grownAt   DateTime? @map("grown_at")
+  retiredAt DateTime? @map("retired_at")
+  garden    Garden    @relation(fields: [gardenId], references: [id], onDelete: Cascade, map: "garden_plants_garden_id_fkey")
+
+  @@index([gardenId, slot], map: "garden_plants_garden_slot_idx")
+  @@map("garden_plants")
+}
+
+/// Every drop is written here exactly once. `basis` is the idempotency key:
+/// practice-session:<id>, checkin-day:<userId>:<dateKey>, journal-day:<userId>:<dateKey>.
+model RewardLedger {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  basis     String   @unique(map: "reward_ledger_basis_key")
+  /// first-action | extra-action | checkin | journal
+  kind      String
+  drops     Int
+  dateKey   String   @map("date_key")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation("RewardLedger", fields: [userId], references: [id], onDelete: Cascade, map: "reward_ledger_user_id_fkey")
+
+  @@index([userId, dateKey], map: "reward_ledger_user_date_key_idx")
+  @@map("reward_ledger")
+}
+
+model Achievement {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  key        String
+  unlockedAt DateTime @default(now()) @map("unlocked_at")
+  user       User     @relation("Achievements", fields: [userId], references: [id], onDelete: Cascade, map: "achievements_user_id_fkey")
+
+  @@unique([userId, key], map: "achievements_user_key_key")
+  @@map("achievements")
+}
+
+model NotificationPreference {
+  id               String  @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId           String  @map("user_id") @db.Uuid
+  /// anchor | program | evening | weekly
+  kind             String
+  enabled          Boolean @default(false)
+  timeMinutes      Int     @default(600) @map("time_minutes")
+  weekdays         Int[]   @default([1, 2, 3, 4, 5, 6, 7])
+  quietFromMinutes Int     @default(0) @map("quiet_from_minutes")
+  quietToMinutes   Int     @default(420) @map("quiet_to_minutes")
+  user             User    @relation("NotificationPreferences", fields: [userId], references: [id], onDelete: Cascade, map: "notification_preferences_user_id_fkey")
+
+  @@unique([userId, kind], map: "notification_preferences_user_kind_key")
+  @@map("notification_preferences")
+}
+
+model NotificationJob {
+  id            String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  kind          String
+  nextRunAt     DateTime  @map("next_run_at")
+  /// active | paused | user-blocked | bot-blocked
+  status        String    @default("active")
+  lastAttemptAt DateTime? @map("last_attempt_at")
+  lastError     String?   @map("last_error")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  user          User      @relation("NotificationJobs", fields: [userId], references: [id], onDelete: Cascade, map: "notification_jobs_user_id_fkey")
+
+  @@index([status, nextRunAt], map: "notification_jobs_status_next_run_at_idx")
+  @@map("notification_jobs")
+}
+
+model SupportResource {
+  id         String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  country    String
+  title      String
+  orgUrl     String    @map("org_url")
+  contacts   Json
+  hours      String?
+  /// draft | published | retired
+  status     String    @default("draft")
+  verifiedAt DateTime? @map("verified_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@index([country, status], map: "support_resources_country_status_idx")
+  @@map("support_resources")
+}
+
+/// Minimal technical events only; journal texts and check-in notes never land here.
+model ProductEvent {
+  id        BigInt   @id @default(autoincrement())
+  userId    String?  @map("user_id") @db.Uuid
+  name      String
+  props     Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([name, createdAt], map: "product_events_name_created_at_idx")
+  @@map("product_events")
+}
+
+model AdminAuditLog {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  actorId   String   @map("actor_id") @db.Uuid
+  action    String
+  entity    String
+  entityId  String?
+  payload   Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation("AdminAuditActor", fields: [actorId], references: [id], onDelete: Cascade, map: "admin_audit_logs_actor_id_fkey")
+
+  @@index([entity, createdAt], map: "admin_audit_logs_entity_created_at_idx")
+  @@map("admin_audit_logs")
 }

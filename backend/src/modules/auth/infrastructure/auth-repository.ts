@@ -47,6 +47,38 @@ export function createPrismaAuthRepository(db: DbClient): AuthRepository {
       }
     },
 
+    upsertTelegramUserWithSession(input) {
+      return db.$transaction(async (tx) => {
+        const profile = {
+          displayName: input.telegram.firstName ?? input.telegram.username ?? null,
+          telegramUsername: input.telegram.username ?? null,
+          telegramPhotoUrl: input.telegram.photoUrl ?? null,
+        }
+        const user = await tx.user.upsert({
+          where: { telegramId: input.telegram.id },
+          create: {
+            email: `${input.telegram.id}@telegram.opora`,
+            telegramId: input.telegram.id,
+            ...profile,
+            role: 'user' as const,
+          },
+          update: profile,
+        })
+        const session = await tx.authSession.create({
+          data: {
+            userId: user.id,
+            refreshTokenHash: input.session.refreshTokenHash,
+            refreshTokenFamilyHash: input.session.refreshTokenFamilyHash,
+            expiresAt: input.session.expiresAt,
+            userAgent: input.session.metadata.userAgent,
+            ipAddress: input.session.metadata.ipAddress,
+          },
+          select: { id: true },
+        })
+        return { user, session }
+      }, userAuthenticationSessionTransactionOptions)
+    },
+
     createSession(input) {
       return db.$transaction(async (tx) => {
         await acquireUserAuthenticationAuthorityLock(tx, input.userId)

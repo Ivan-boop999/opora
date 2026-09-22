@@ -39,6 +39,10 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(32),
+  /// Telegram bot token; required for the mini-app initData login to accept users.
+  TELEGRAM_BOT_TOKEN: z.string().min(20).optional(),
+  /// How old a signed Telegram initData may be, in seconds (default: 24 hours).
+  TELEGRAM_INITDATA_MAX_AGE_SECONDS: z.coerce.number().int().positive().max(30 * 86400).default(86400),
   CORS_ORIGINS: z
     .string()
     .default('http://localhost:5173,http://localhost:8081,http://localhost:19006')
