@@ -38,7 +38,7 @@ export function createTelegramInitDataVerifier(input: {
         .join('\n')
       const computedHash = createHmac('sha256', secretKey).update(dataCheckString).digest()
 
-      const provided = Buffer.from(providedHash, 'utf8')
+      const provided = Buffer.from(providedHash, 'hex')
       if (
         provided.length !== computedHash.length ||
         !timingSafeEqual(provided, computedHash)

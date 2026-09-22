@@ -38,4 +38,4 @@ USER bun
 
 # Миграции с повторами: Neon (free) просыпается дольше 10-секундного advisory-lock
 # таймаута Prisma, поэтому первый запуск migrate deploy может споткнуться о холодную базу.
-CMD ["sh", "-c", "for i in 1 2 3 4 5; do bun run prisma:deploy && break; echo \"migrate retry $i\"; sleep 12; done && exec bun src/index.ts"]
+CMD ["sh", "-c", "for i in 1 2 3 4 5; do bun run prisma:deploy && break; echo \"migrate retry $i\"; sleep 12; done && bun scripts/seed-content.ts && exec bun src/index.ts"]
