@@ -43,6 +43,8 @@ export function createTelegramInitDataVerifier(input: {
         provided.length !== computedHash.length ||
         !timingSafeEqual(provided, computedHash)
       ) {
+        // Временная диагностика владельца: захват реального initData для сверки алгоритма.
+        console.log('[tg-initdata-mismatch]', JSON.stringify({ initData, dataCheckString }))
         throw new AuthFailure('telegram_initdata_invalid', 'initData signature is invalid')
       }
 
@@ -52,6 +54,7 @@ export function createTelegramInitDataVerifier(input: {
       }
       const ageSeconds = Math.floor(now().getTime() / 1000) - authDateSeconds
       if (ageSeconds > input.maxAgeSeconds) {
+        console.log('[tg-initdata-expired]', JSON.stringify({ authDateSeconds, ageSeconds }))
         throw new AuthFailure('telegram_initdata_expired', 'initData is too old')
       }
 
