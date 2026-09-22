@@ -2,8 +2,8 @@ import type {
   AdminUserSummary,
   AdminUsersQuery,
   UserRole,
-} from '@web-app-demo/contracts'
-import { ADMIN_USERS_MAX_PAGE } from '@web-app-demo/contracts'
+} from '@opora/contracts'
+import { ADMIN_USERS_MAX_PAGE } from '@opora/contracts'
 
 import {
   acquireUserAuthenticationAuthorityLock,

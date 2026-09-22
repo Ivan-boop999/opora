@@ -40,7 +40,7 @@ bun run --cwd backend db:deploy
 
 `test:unit` и `test:integration` принимают точные найденные пути относительно `backend/` и фильтр имени Bun `-t`. Без фильтров запускается весь набор.
 
-`bun run test:integration` запускает `postgres_test` из `../docker-compose.yml`, применяет миграции к `web_app_demo_test` и выполняет выбранные тесты. Каждый запуск получает отдельный Compose-проект. Блок `finally` удаляет только его сервис, именованный том и сеть, в том числе после частичной ошибки запуска.
+`bun run test:integration` запускает `postgres_test` из `../docker-compose.yml`, применяет миграции к `opora_test` и выполняет выбранные тесты. Каждый запуск получает отдельный Compose-проект. Блок `finally` удаляет только его сервис, именованный том и сеть, в том числе после частичной ошибки запуска.
 
 - `TEST_KEEP_DOCKER=1` сохраняет эти ресурсы для диагностики.
 - Для внешнего Docker задай вместе `TEST_SKIP_DOCKER=1` и `TEST_DATABASE_URL`. В этом режиме скрипт не меняет Docker-ресурсы.
@@ -54,8 +54,8 @@ bun run --cwd backend db:deploy
 
 | Переменная | Локальный сервис | БД | Пользователь / пароль | Порт |
 | --- | --- | --- | --- | --- |
-| `DATABASE_URL` | `postgres` | `web_app_demo` | `superuser` / `superpassword` | `54329` |
-| `TEST_DATABASE_URL` | `postgres_test` | `web_app_demo_test` | `superuser` / `superpassword` | `54330` при ручном запуске |
+| `DATABASE_URL` | `postgres` | `opora` | `superuser` / `superpassword` | `54329` |
+| `TEST_DATABASE_URL` | `postgres_test` | `opora_test` | `superuser` / `superpassword` | `54330` при ручном запуске |
 
 Это публичные локальные значения из [инструкции PostgreSQL](../docs/LOCAL_DATABASE.md). Автоматические тесты могут выбрать порт по репозиторию, чтобы копии проекта не конфликтовали.
 
@@ -116,7 +116,7 @@ Production использует отдельную команду `bun run db:de
 
 ## Деплой
 
-Инфраструктура находится в [infra](../infra/README.md). Следуй [общей инструкции](../docs/DEPLOYMENT.md), затем выбранному в `CHECKLIST.md` провайдеру: [DigitalOcean](../docs/DIGITALOCEAN.md) или [Yandex Cloud](../docs/YANDEX_CLOUD.md).
+Деплой — Render free по [общей инструкции](../docs/DEPLOYMENT.md); выбор зафиксирован в `CHECKLIST.md`.
 
 `bun run release -- <provider>` собирает `backend/Dockerfile`, требует успешный `db:deploy`, запускает API и задания, затем проверяет готовность. Не коммить секреты в tfvars или backend-конфигурации.
 

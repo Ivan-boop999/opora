@@ -21,14 +21,14 @@ afterEach(() => {
 })
 
 const testDatabaseUrl =
-  'postgresql://superuser:superpassword@localhost:54330/web_app_demo_test?schema=public'
+  'postgresql://superuser:superpassword@localhost:54330/opora_test?schema=public'
 const developmentDatabaseUrl =
-  'postgresql://superuser:superpassword@localhost:54329/web_app_demo?schema=public'
+  'postgresql://superuser:superpassword@localhost:54329/opora?schema=public'
 
 test('the E2E run accepts a *_test database and refuses a development database', () => {
   expect(() => assertE2eDatabaseUrl(testDatabaseUrl)).not.toThrow()
   expect(() => assertE2eDatabaseUrl(developmentDatabaseUrl)).toThrow(
-    /non-test database "web_app_demo".*E2E_ALLOW_NON_TEST_DATABASE=1/,
+    /non-test database "opora".*E2E_ALLOW_NON_TEST_DATABASE=1/,
   )
 })
 

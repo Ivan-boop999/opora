@@ -82,7 +82,7 @@ Each managed run creates a separate `${COMPOSE_PROJECT_NAME}-integration-<run>`.
 
 Two runs from the same checkout get different Compose projects but the same derived port. If the port is occupied, the second run fails without stopping the first. To use another run's managed database, enable skip and supply its test URL.
 
-Integration and Docker smoke require a database name with `_test` by default. A separate variable permits an intentional exception. This protects `web_app_demo` from test writes. See [LOCAL_DATABASE.md](LOCAL_DATABASE.md) for connection and reset instructions.
+Integration and Docker smoke require a database name with `_test` by default. A separate variable permits an intentional exception. This protects `opora` from test writes. See [LOCAL_DATABASE.md](LOCAL_DATABASE.md) for connection and reset instructions.
 
 Docker smoke uses the repository Compose project and `postgres_test`. It selects a free backend port, builds the backend, waits for `/health/ready`, and checks authentication with the database. Cleanup removes the smoke container, test database service, and test database volume.
 
@@ -142,7 +142,7 @@ Use this check for storage changes or an explicit storage audit. It does not rep
 Variables:
 
 ```bash
-TEST_DATABASE_URL="postgresql://superuser:superpassword@localhost:<test-port>/web_app_demo_test?schema=public"
+TEST_DATABASE_URL="postgresql://superuser:superpassword@localhost:<test-port>/opora_test?schema=public"
 POSTGRES_TEST_PORT=<test-port>
 E2E_BACKEND_PORT=<backend-port>
 E2E_WEB_PORT=<web-port>

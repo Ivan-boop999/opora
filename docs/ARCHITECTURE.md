@@ -97,7 +97,7 @@ Auth v1 использует собственную JWT-схему:
 
 ## Клиенты
 
-`website` (Astro SSG, SSR по необходимости) владеет публичными SEO-страницами и превью: лендингом, контентом и каталогом. `webapp` (React CSR) владеет кабинетами, checkout, панелями и настройками после входа. Маркетплейсу обычно нужны оба с `@web-app-demo/contracts`.
+`website` (Astro SSG, SSR по необходимости) владеет публичными SEO-страницами и превью: лендингом, контентом и каталогом. `webapp` (React CSR) владеет кабинетами, checkout, панелями и настройками после входа. Маркетплейсу обычно нужны оба с `@opora/contracts`.
 
 Выбор описан в [README](../README.md#choose-between-webapp-and-website), границы данных и платежей — в [WEB_SURFACES](WEB_SURFACES.md).
 
@@ -106,7 +106,7 @@ Auth v1 использует собственную JWT-схему:
 Правила webapp:
 
 - TanStack Query управляет серверными данными, TanStack Form — формами.
-- Zod-схемы берутся из `@web-app-demo/contracts`.
+- Zod-схемы берутся из `@opora/contracts`.
 - `src/platform/api`: общие fetch, base URL, разбор ответов и ошибок без знания endpoint.
 - `src/platform/intl`: общие форматтеры с фиксированной локалью, сейчас для дат.
 - `src/features/<context>`: пути, схемы, серверные адаптеры, провайдеры и UI контекста.
@@ -140,7 +140,7 @@ SSR и islands требуют адаптер Astro и runtime; Static Site/ст�
 
 SEO-данные должны быть в начальном HTML: заголовки, описания, canonical, social tags, имена товаров/категорий и нужные цены. Islands могут дополнять их, но не быть единственным источником.
 
-Auth сайта ограничен малыми публичными функциями, например состоянием входа в шапке. Не копируй кабинет из `webapp`. При подключении API/DTO добавь `@web-app-demo/contracts` и проверь обе стороны.
+Auth сайта ограничен малыми публичными функциями, например состоянием входа в шапке. Не копируй кабинет из `webapp`. При подключении API/DTO добавь `@opora/contracts` и проверь обе стороны.
 
 Astro — стандарт для контента, статики и малого объёма JavaScript. Next.js нужен при явном требовании платформы ISR/кэша под Vercel. TanStack Start — будущий вариант единого React с выборочным SSR, не исходный путь для проекта без команды разработчиков.
 
@@ -180,7 +180,7 @@ bun run --cwd backend prisma:deploy
 
 ## Локальная инфраструктура
 
-PostgreSQL запускает Docker Compose. Сервис разработки использует `postgres:18-alpine`, БД `web_app_demo`, порт `54329` и том `postgres_18_data`. Тестовый сервис использует тот же образ и `web_app_demo_test`; исполнители задают вычисленный по репозиторию `POSTGRES_TEST_PORT`.
+PostgreSQL запускает Docker Compose. Сервис разработки использует `postgres:18-alpine`, БД `opora`, порт `54329` и том `postgres_18_data`. Тестовый сервис использует тот же образ и `opora_test`; исполнители задают вычисленный по репозиторию `POSTGRES_TEST_PORT`.
 
 Версия 18 нужна для `uuidv7()`. При изменении имён, портов, ключей, образа или томов согласуй `docker-compose.yml`, `backend/.env.example` и [LOCAL_DATABASE.md](LOCAL_DATABASE.md).
 

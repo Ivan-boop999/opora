@@ -1,50 +1,20 @@
-# Vibe Coding Template
+# ТвояОпора (opora)
 
-<p align="center">
-  <img src="docs/assets/vibe_tmpl_schema.png" alt="Vibe Coding Template architecture diagram" width="100%">
-</p>
+Telegram мини-апп бота [@oporatvoja_bot](https://t.me/oporatvoja_bot). Основа — [шаблон vibe](https://github.com/di-sukharev/vibe): Bun/Hono/Prisma/PostgreSQL + React webapp + общие контракты. Репозиторий: https://github.com/Ivan-boop999/opora.
 
-A web product template with a shared backend. The `mobile` branch adds Expo and optional subscriptions, push notifications, and social sign-in to `master`.
+Продуктовые решения и статус приложений — в [CHECKLIST.md](CHECKLIST.md).
 
-## Prompt to copy to your agent
+## Деплой
 
-```text
-Set up https://github.com/di-sukharev/vibe as the base for a new project.
-Before cloning, ask whether mobile is needed: use the mobile branch for yes and master for no.
-Read AGENTS.md and follow the "Agent setup instructions" section in README.md.
-Communicate in my language.
-```
+| Сервис | URL | Платформа |
+| --- | --- | --- |
+| webapp (мини-апп) | https://opora.onrender.com | Render static, free |
+| API | https://opora-api.onrender.com | Render docker, free |
+| БД | Neon (база `opora`) | free |
 
-## Agent setup instructions
+Автодеплой с ветки `master`: push в GitHub → Render пересобирает оба сервиса. Каталог `infra/` удалён при установке — Terraform не используется. Миграция на Yandex Cloud при появлении бюджета (решение владельца записано в CHECKLIST.md).
 
-[AGENTS.md](AGENTS.md) defines the working rules. [CLAUDE.md](CLAUDE.md) imports them. Do not develop features before setup is complete.
-
-1. Before cloning, ask whether mobile is needed now. Select `mobile` or `master`.
-2. For mobile, clone the full repository and fetch both branches. On `mobile`, install dependencies from the lockfile and run `bun run mobile:template:check -- --published`. Stop if the command is missing or fails. The template owner must synchronize the branches and preserve the application and capability registry.
-3. Read the instructions, scripts, and `.env.example` files for the selected applications. Complete [CHECKLIST.md](CHECKLIST.md) in the user's language according to its rules. Record the name and slug, active and deferred applications, features, and deployment scope. Make technical decisions yourself. Update the capability registry as features change.
-4. Treat setup as a new project unless the user explicitly asks to work on the template itself. For a new project, run `git remote remove origin`. Add a new remote only from a user-provided address or a request to publish. Otherwise, report that publication is not configured. Do not open a PR in the template repository during setup.
-5. Configure only the selected applications. Keep the others and record the reason for deferral in their README files. When an application becomes active, update that record, configure it, and verify it. Add browser features only for the needs of active applications. Comment on inactive code only when its purpose is unclear.
-6. For web without mobile, do not configure Expo, EAS, or Maestro. Switch to the mobile branch when mobile is added. Do not set `expo.owner` or `extra.eas.projectId` in the template. In a new project, select the account or organization and use EAS project init to set them. Maestro requires an Expo development build. Expo Go is not sufficient.
-7. Follow the [quick start](#quick-start). Create local `.env` files from the examples and generate `JWT_SECRET`. Do not commit or print secrets. Cloud credentials are not needed without deployment.
-8. Run focused checks. Remove the *Initial setup only* section and its markers from AGENTS.md. Report local URLs, commands, results, and exact actions still needed from the user.
-
-### Rename the project
-
-Search with `rg -n "web_app_demo|web-app-demo|vibecoding-template|Vibe Coding Template"`. Check packages, databases, cookies, Docker and Compose, images, architecture-check aliases, and `webapp/index.html`. Make targeted edits. Regenerate `bun.lock` with the pinned Bun version. Install dependencies. Check types, architecture, and backend integration for the selected applications.
-
-### Hosting and deployment
-
-| Condition | Hosting |
-| --- | --- |
-| The audience is in Russia, or data must remain in Russia | [Yandex Cloud](docs/YANDEX_CLOUD.md) |
-| Other cases | [DigitalOcean](docs/DIGITALOCEAN.md) |
-| The user explicitly requires full control | [Self-hosting](docs/DEPLOYMENT.md#свой-сервер) |
-
-Record the choice in CHECKLIST. In a new project, remove the unused cloud provider's directory and guide. Follow [DEPLOYMENT.md](docs/DEPLOYMENT.md), [infra/README.md](infra/README.md), and the provider guide. Before cloud changes, check the remote and target commit. The branch must be clean and pushed to its upstream. Stop if it is out of sync or HEAD is detached.
-
-Define resource sizes and composition in Terraform. Document operating changes in the guide. Request only necessary actions outside Terraform: accounts, billing, CLI setup, domains, certificates, DNS, and permissions. The mobile README covers Expo, EAS, and app stores.
-
-## Applications
+## Приложения
 
 | Path and guide | Purpose |
 | --- | --- |

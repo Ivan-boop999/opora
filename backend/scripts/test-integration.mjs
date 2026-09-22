@@ -97,7 +97,7 @@ export async function runBackendIntegration({
           '-U',
           'superuser',
           '-d',
-          'web_app_demo_test',
+          'opora_test',
         ],
         {
           cwd: repositoryRoot,

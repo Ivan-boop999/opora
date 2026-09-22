@@ -50,7 +50,7 @@ Copy-Item backend/.env.example backend/.env
 docker compose --env-file backend/.env pull postgres
 docker compose --env-file backend/.env up -d postgres
 docker compose --env-file backend/.env ps postgres
-docker compose --env-file backend/.env exec postgres pg_isready -U superuser -d web_app_demo
+docker compose --env-file backend/.env exec postgres pg_isready -U superuser -d opora
 ```
 
 Локальное подключение:
@@ -58,10 +58,10 @@ docker compose --env-file backend/.env exec postgres pg_isready -U superuser -d 
 ```text
 host: localhost
 port: 54329
-database: web_app_demo
+database: opora
 user: superuser
 password: superpassword
-DATABASE_URL: postgresql://superuser:superpassword@localhost:54329/web_app_demo?schema=public
+DATABASE_URL: postgresql://superuser:superpassword@localhost:54329/opora?schema=public
 ```
 
 Примени миграции:
@@ -95,10 +95,10 @@ docker compose --env-file backend/.env up -d postgres_test
 ```text
 host: localhost
 port: 54330
-database: web_app_demo_test
+database: opora_test
 user: superuser
 password: superpassword
-TEST_DATABASE_URL: postgresql://superuser:superpassword@localhost:54330/web_app_demo_test?schema=public
+TEST_DATABASE_URL: postgresql://superuser:superpassword@localhost:54330/opora_test?schema=public
 ```
 
 Автоматические скрипты выбирают `POSTGRES_TEST_PORT` по репозиторию и формируют `TEST_DATABASE_URL`. Это позволяет запускать копии проекта параллельно. Задавай порт вручную только при необходимости фиксированного значения.

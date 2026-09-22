@@ -188,7 +188,7 @@ Worker App Platform запускает `bun run start:scheduler`. Это не ц
 
 | Сигнал | DigitalOcean | Yandex Cloud | Свой сервер |
 | --- | --- | --- | --- |
-| Исполнитель остановился или падает | Terraform: `RESTART_COUNT` > 1 за 5 минут и `DEPLOYMENT_FAILED`; email команды. Не выявляет каждую ошибку живого worker. См. [уведомления](DIGITALOCEAN.md#уведомления). | Ручной Monitoring-alert `outbox drain stopped`: `serverless.containers.started_per_second`, отсутствие данных = Alarm. См. [уведомления](YANDEX_CLOUD.md#уведомления). | Уведомления supervisor; `systemctl status` показывает последний выход. |
+| Исполнитель остановился или падает | Terraform: `RESTART_COUNT` > 1 за 5 минут и `DEPLOYMENT_FAILED`; email команды. Не выявляет каждую ошибку живого worker. См. уведомления. | Ручной Monitoring-alert `outbox drain stopped`: `serverless.containers.started_per_second`, отсутствие данных = Alarm. См. уведомления. | Уведомления supervisor; `systemctl status` показывает последний выход. |
 | Мало памяти или постоянная нагрузка | `MEM_UTILIZATION` > 85% за 10 минут, `CPU_UTILIZATION` > 90% за 30 минут. | Каждый вызов имеет собственную память. | Мониторинг сервера. |
 | Проход завершился ошибкой | Уведомление только при падении/зависании worker; иначе ищи `Scheduler job outbox:drain failed.`. | Ручной `job failed` по `serverless.containers.errors_per_second`; HTTP-исполнитель возвращает 503. | Журнал. |
 | Метрики outbox выше | Runtime-лог worker через `doctl`. | Log group через `yc logging read` с учётом `min_level`. | Журнал. |
@@ -220,8 +220,8 @@ Worker App Platform запускает `bun run start:scheduler`. Это не ц
 
 ## Особенности провайдеров
 
-- [DigitalOcean](DIGITALOCEAN.md): scheduler worker с образом API и окружением БД; Terraform-уведомления по рестартам, памяти и CPU.
-- [Yandex Cloud](YANDEX_CLOUD.md): HTTP-контейнер и таймер для каждой записи `job-schedules.json`. Два Monitoring-alert создаются вручную: ресурса провайдера нет.
+- DigitalOcean: scheduler worker с образом API и окружением БД; Terraform-уведомления по рестартам, памяти и CPU.
+- Yandex Cloud: HTTP-контейнер и таймер для каждой записи `job-schedules.json`. Два Monitoring-alert создаются вручную: ресурса провайдера нет.
 
 ## Официальная документация
 
