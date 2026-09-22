@@ -13,7 +13,16 @@ import type { AppEnv } from './env'
 import { errorResponse, handleError, validationErrorHook } from './http/errors'
 import { createReadinessProbe } from './http/readiness'
 import { createAuthSecurity, createFixedWindowRateLimit } from './http/security'
+import { localDateKey, localMinutesOfDay } from './local-date'
 import { createAuthModule, type AuthHttpEnv } from './modules/auth'
+import { createCheckInsModule } from './modules/checkins'
+import { createGardenModule } from './modules/garden'
+import { createJournalModule } from './modules/journal'
+import { createOverviewModule } from './modules/overview'
+import { createPlansModule } from './modules/plans'
+import { createPreferencesModule } from './modules/preferences'
+import { createPracticesModule } from './modules/practices'
+import { createSupportModule } from './modules/support'
 import { createUploadsModule } from './modules/uploads'
 import { createUsersModule } from './modules/users'
 import { createRateLimitStores } from './rate-limit'
@@ -23,6 +32,7 @@ import {
   createPrivateStorage,
   type PrivateStorageRuntime,
 } from './storage'
+import { createInsightsAdapter } from './modules/overview/infrastructure/insights-adapter'
 
 type CreateAppOptions = {
   backgroundTasks?: TaskDeferrer
@@ -113,6 +123,7 @@ export function createApp({
     app.use('/api/users/*', middleware)
     app.use('/api/admin/*', middleware)
     app.use('/api/uploads/*', middleware)
+    app.use('/api/app/*', middleware)
   }
   app.get('/', (c) => {
     return c.json({
@@ -150,6 +161,147 @@ export function createApp({
   app.route('/api/users', users.userRoutes)
   app.route('/api/admin', users.adminRoutes)
   app.route('/api/uploads', uploads.routes)
+
+  // ========================================================================
+  // Wellness product modules. Local days follow the user's timezone; the
+  // helper closure re-reads preferences on every call so a timezone change
+  // applies to the next write without a restart.
+  // ========================================================================
+  const userTimezone = async (userId: string) => {
+    const preferences = await prisma.userPreferences.findUnique({
+      where: { userId },
+      select: { timezone: true },
+    })
+    return preferences?.timezone ?? 'Europe/Moscow'
+  }
+  const dateKeyFor = async (userId: string) => localDateKey(new Date(), await userTimezone(userId))
+
+  const preferences = createPreferencesModule({ db: prisma, requireAuth: auth.requireAuth })
+  const garden = createGardenModule({
+    dateKeyNow: dateKeyFor,
+    db: prisma,
+    requireAuth: auth.requireAuth,
+  })
+  const plans = createPlansModule({
+    dateKeyNow: dateKeyFor,
+    db: prisma,
+    requireAuth: auth.requireAuth,
+  })
+  const practices = createPracticesModule({
+    dateKeyNow: dateKeyFor,
+    db: prisma,
+    requireAuth: auth.requireAuth,
+    rewards: {
+      onSessionFinished: async ({ userId, sessionId, dateKey, distinctActionToday }) =>
+        garden.service.applyReward({
+          userId,
+          basis: `practice-session:${sessionId}`,
+          kind: distinctActionToday ? 'extra-action' : 'first-action',
+          drops: distinctActionToday ? 1 : 2,
+          dateKey,
+        }),
+      onTriedEasier: async (userId) => garden.service.achieve(userId, 'tried-easier'),
+    },
+    activeProgramPractice: async (userId) =>
+      (await plans.programs.activeEnrollment(userId))?.day?.practiceCode ?? null,
+  })
+  const checkins = createCheckInsModule({
+    dateKeyNow: dateKeyFor,
+    db: prisma,
+    onCreated: async ({ userId, dateKey }) => {
+      await garden.service.applyReward({
+        userId,
+        basis: `checkin-day:${userId}:${dateKey}`,
+        kind: 'checkin',
+        drops: 1,
+        dateKey,
+      })
+      const gardenState = await garden.service.getState(userId, dateKey)
+      if (gardenState.plants.length === 0 && gardenState.totalDrops >= 2) {
+        // First useful interaction: welcome the sprout automatically.
+        await garden.service.plant({ userId, species: 'sprout' })
+        await garden.service.achieve(userId, 'first-step')
+      }
+    },
+    requireAuth: auth.requireAuth,
+  })
+  const journal = createJournalModule({
+    dateKeyNow: dateKeyFor,
+    db: prisma,
+    onCreated: async ({ userId, dateKey }) => {
+      await garden.service.applyReward({
+        userId,
+        basis: `journal-day:${userId}:${dateKey}`,
+        kind: 'journal',
+        drops: 1,
+        dateKey,
+      })
+    },
+    requireAuth: auth.requireAuth,
+  })
+
+  const insightsData = createInsightsAdapter(prisma)
+  const overview = createOverviewModule({
+    requireAuth: auth.requireAuth,
+    ports: {
+      dateKeyNow: dateKeyFor,
+      minutesNow: async (userId) => localMinutesOfDay(new Date(), await userTimezone(userId)),
+      latestCheckIn: async (userId, dateKey) => {
+        const row = await prisma.checkIn.findFirst({
+          where: { userId, dateKey },
+          orderBy: { createdAt: 'desc' },
+        })
+        if (!row) return null
+        const { toDto } = await import('./modules/checkins/infrastructure/checkin-repository')
+        return toDto(row)
+      },
+      recommend: (userId, input) => practices.service.recommend(userId, input),
+      routines: (userId) => plans.routines.list(userId),
+      activeEnrollment: (userId) => plans.programs.activeEnrollment(userId),
+      gardenSummary: async (userId, dateKey) => {
+        const state = await garden.service.getState(userId, dateKey)
+        const growing = state.plants[state.plants.length - 1] ?? null
+        return {
+          visible: state.visible,
+          totalDrops: state.totalDrops,
+          todayDrops: state.todayDrops,
+          plantStage: growing?.stage ?? null,
+          plantSpecies: growing?.species ?? null,
+        }
+      },
+      favorites: async (userId, limit) => {
+        const codes = await prisma.practiceFavorite.findMany({
+          where: { userId },
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+          select: { practiceCode: true },
+        })
+        const items = await Promise.all(
+          codes.map((row) => practices.service.byCode(userId, row.practiceCode)),
+        )
+        return items.filter((practice): practice is NonNullable<typeof practice> => practice !== null)
+      },
+      preferences: async (userId) => {
+        const record = await preferences.service.get(userId)
+        return {
+          gamificationVisible: record.gamificationVisible,
+          onboardingDone: record.onboardingDone,
+          pacePreset: record.pacePreset,
+          eveningTimeMinutes: record.eveningTimeMinutes,
+        }
+      },
+      insightsData: (userId, from, to) => insightsData(userId, from, to),
+    },
+  })
+
+  app.route('/api/app/preferences', preferences.routes)
+  app.route('/api/app/garden', garden.routes)
+  app.route('/api/app/practices', practices.routes)
+  app.route('/api/app/checkins', checkins.routes)
+  app.route('/api/app/journal', journal.routes)
+  app.route('/api/app/plans', plans.routes)
+  app.route('/api/app/overview', overview.routes)
+  app.route('/api/app/support', createSupportModule({ db: prisma }).routes)
 
   // Only the filesystem driver needs the backend to serve the URLs it signs. With an S3 driver
   // the browser uploads straight to the bucket and there is nothing to mount here.

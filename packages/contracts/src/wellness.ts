@@ -559,3 +559,20 @@ export const todayResponseSchema = z.object({
 export const telegramAuthRequestSchema = z.object({
   initData: z.string().min(16).max(8192),
 })
+
+// --- Inferred DTO types -----------------------------------------------------------
+
+export type GardenScene = z.infer<typeof gardenSceneSchema>
+export type GardenSpecies = z.infer<typeof gardenSpeciesSchema>
+export type GardenPlantDto = z.infer<typeof gardenPlantDtoSchema>
+export type RewardResult = z.infer<typeof rewardResultSchema>
+export type RoutineDto = z.infer<typeof routineDtoSchema>
+export type ProgramDto = z.infer<typeof programDtoSchema>
+export type EnrollmentDto = z.infer<typeof enrollmentDtoSchema>
+export type FocusDto = z.infer<typeof focusDtoSchema>
+export type SleepDto = z.infer<typeof sleepDtoSchema>
+export type JournalDto = z.infer<typeof journalDtoSchema>
+export type SessionDto = z.infer<typeof sessionDtoSchema>
+export type Need = z.infer<typeof needSchema>
+export type TimeOfDay = z.infer<typeof timeOfDaySchema>
+export type RecommendationQuery = z.infer<typeof recommendationQuerySchema>
